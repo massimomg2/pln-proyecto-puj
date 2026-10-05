@@ -1,602 +1,498 @@
 # Entrega 2 · Estabilidad de la agenda temática de la prensa colombiana (1980–2011)
 
-Oct 4, 2026 · @Massimo
+**Integrantes:** José Miguel Bejarano, Massimo Maimone, Mauricio Morales, Juan Felipe Guzmán y David Castañeda.
 
-**Integrantes:** José Miguel Bejarano, Massimo Maimone, Mauricio Morales, Juan Felipe Guzmán y David Castañeda · Procesamiento de Lenguaje Natural, Pontificia Universidad Javeriana · Profesor: Luis Gabriel Moreno Sandoval
+**Curso:** Procesamiento de Lenguaje Natural · Pontificia Universidad Javeriana. **Profesor:** Luis Gabriel Moreno Sandoval. **Fecha:** 5 de octubre de 2026.
 
-## 1. Resumen
+## 1. Resumen y pregunta de investigación
 
-**La agenda temática de El Tiempo entre 1990 y 2011 es muy estable de un año al siguiente, pero no es estática: deriva de forma gradual y cambia de régimen en 1995, 1999 y 2006.** El cambio medio entre años consecutivos (divergencia Jensen‑Shannon, JS = 0,0029) equivale al 6 % de la distancia entre dos fuentes distintas en el mismo año (JS = 0,0497, El Tiempo frente a Semana).
+La agenda temática de los documentos de El Tiempo entre 1990 y 2011 presenta diferencias anuales pequeñas, aunque estadísticamente detectables, y tres fronteras de segmentación reproducidas por las variantes examinadas: 1995, 1999–2000 y 2006. El cambio medio entre años consecutivos, medido con divergencia Jensen–Shannon (JS), es 0,00293; equivale aproximadamente al 5,90% de la distancia media entre El Tiempo y Semana en el mismo año (0,04970). Estas magnitudes describen el corpus disponible y dependen de la representación y del modelo de tópicos.
 
-- **Pregunta:** ¿qué tan estable es la agenda temática de la prensa colombiana entre 1980 y 2011 y cuándo cambia de forma significativa? Agenda = prevalencia de tópicos (proporción del corpus dedicada a cada tema en un año).
-- **Orden de trabajo:** primero entender el corpus (EDA avanzado), luego medir estabilidad y detectar cambios con métodos progresivamente más costosos, y solo al final contrastar con coyunturas históricas.
-- **Método:** TF‑IDF + NMF (K = 40 tópicos), prevalencia anual, divergencia JS contra un modelo nulo de permutaciones estratificado por fuente, segmentación binaria con umbral calibrado por permutación y pruebas de robustez.
-- **Hallazgo central:** los tres cambios de El Tiempo (1995, 1999, 2006) sobreviven a 6 de 6 variantes (otro K, otra semilla, sin nombres propios) y reaparecen en Semana (1994, 1998, 2006) y Dinero (2007), que son fuentes independientes.
-- **Alcance real:** 1980–1989 solo tiene Semana, con 31–166 documentos por año; no hay datos de 1981. La respuesta sólida cubre 1990–2011; los años 80 se describen, no se contrastan.
-- **Contraste histórico:** los tres cambios caen a ±1 año de eventos de la lista congelada, pero con esa lista el azar daría 2,5 aciertos de 3 (P = 0,58): no es evidencia a favor de ninguna interpretación histórica.
+La pregunta es: **¿qué tópicos latentes caracterizan los documentos de El Tiempo, Semana y Dinero entre 1980 y 2011, qué diferencias existen entre fuentes y qué estabilidad o cambios muestra su composición temática?** Se define agenda como la media anual de las composiciones de tópicos de los documentos. Esta definición mide contenido publicado y conservado en el corpus; no mide la opinión pública, la audiencia ni la importancia social de cada asunto.
 
-## 2. Estado del arte
+El análisis usa 91.585 documentos, con 31.896.684 tokens alfabéticos antes del filtro y 15.532.463 tokens de contenido. El Tiempo aporta el 89,03% de los documentos. Antes de 1990 solo hay Semana y falta 1981; por tanto, la serie principal de inferencia es El Tiempo, 1990–2011. El corpus completo se conserva para descripción y contraste.
 
-**La pregunta combina tres tradiciones: la lectura cuantitativa de textos a gran escala (culturomics), la teoría de la agenda como equilibrio puntuado, y los modelos de tópicos con detección de cambios.** El artículo de referencia sobre este mismo corpus pertenece a la primera; la pregunta del proyecto pertenece a la segunda y la metodología, a la tercera.
+La metodología realizada combina EDA avanzado, TF-IDF, factorización de matrices no negativas (NMF), prevalencias anuales, JS frente a un nulo por permutación, corrección Benjamini–Hochberg y segmentación binaria calibrada. En El Tiempo, las 21 de 21 transiciones anuales evaluadas son significativas, con magnitud media pequeña. La segmentación principal produce tres cortes, que dividen la serie en cuatro regímenes. Su robustez se examina con seis variantes dependientes del mismo corpus y familia de modelo.
 
-| Línea | Trabajos | Qué aportan | Uso en este proyecto |
-| --- | --- | --- | --- |
-| Culturomics y frecuencia de palabras | Michel et al. (2011), *Science*; Caicedo, Gaviria y Moreno (2012), *Hechos y palabras*, Revista de Economía Institucional 14(26) | Frecuencia de palabras normalizada por el total de 1‑gramas como indicador social. Caicedo et al. usan >2 millones de artículos (\~600 M de palabras) de El Tiempo, Semana y Dinero y validan contra indicadores externos (desempleo, recesión, El Niño) | Corpus de referencia (el nuestro es un subconjunto de 91.585 artículos). Adoptamos la normalización por total de tokens, pero medimos prevalencia de tópicos y su estabilidad, no frecuencias de palabras sueltas |
-| Agenda y cambio | McCombs y Shaw (1972); Baumgartner y Jones (1993), equilibrio puntuado; Comparative Agendas Project | La agenda pública alterna largos periodos estables con cambios abruptos; códigos temáticos comparables | Marco conceptual: “estabilidad + saltos” es lo que contrastamos. El léxico de 13 categorías se inspira en los *major topics* de CAP |
-| Modelos de tópicos para atención política | Lee y Seung (1999), NMF; Blei, Ng y Jordan (2003), LDA; Quinn et al. (2010), *AJPS*; Blei y Lafferty (2006), tópicos dinámicos; Roberts et al. (2014), STM; Grootendorst (2022), BERTopic | Medir la atención como mezcla de tópicos por periodo; incorporar covariables (fuente, tiempo); tópicos sobre embeddings | NMF sobre TF‑IDF como modelo base; STM y BERTopic como mejoras (sección 13) |
-| Representación del texto | Salton y Buckley (1988), TF‑IDF; Reimers y Gurevych (2019), Sentence‑BERT | Ponderación dispersa e interpretable frente a embeddings densos de oración | Comparación empírica en la sección 8 |
-| Ráfagas y puntos de cambio | Kleinberg (2002); Killick, Fearnhead y Eckley (2012), PELT; Truong, Oudre y Vayatis (2020), revisión | Detectar cuándo cambia un flujo de texto o una serie temporal | Kleinberg se probó en el experimento previo y se sustituyó por segmentación binaria con nulo por permutación; PELT queda como mejora |
-| Estadística textual | Monroe, Colaresi y Quinn (2008), log‑odds; Bouma (2009), NPMI; Covington y McFall (2010), MATTR | Términos distintivos, colocaciones y diversidad léxica robustos al tamaño de muestra | EDA avanzado (sección 6) |
+El contraste histórico encuentra tres coincidencias de tres fronteras con una lista de eventos a ±1 año, pero una referencia aleatoria obtiene 2,53 coincidencias en promedio y p = 0,581. No hay evidencia de coincidencia superior a esa referencia ni fundamento para atribuir causalidad histórica. Se propone ampliar la evaluación mediante NMF, LDA, BERTopic y STM, junto con auditoría de cobertura, validación humana, bootstrap y protocolos sin fuga de información. Esas comparaciones y controles son trabajo futuro.
 
-**Qué añadimos.** Respecto al artículo de referencia, el cambio es de enfoque: pasamos de series de frecuencia de palabras a la prevalencia de tópicos y cuantificamos cuánto cambia con un modelo nulo que descuenta el ruido de muestreo y la composición por fuente. Respecto a la literatura de agenda, usamos un corpus de tres medios colombianos de 1980 a 2011.
+## 2. Estado del arte y fundamento conceptual
 
-## 3. Correcciones respecto a la Entrega 1 y al experimento exploratorio
+El proyecto relaciona la medición cuantitativa del texto con modelos de tópicos y análisis temporal. La tradición de frecuencias permite construir indicadores a partir de grandes colecciones, pero exige distinguir el registro mediático de la realidad social que se pretende estudiar. Caicedo, Gaviria y Moreno (2012), en *Hechos y palabras*, estudian más de dos millones de artículos y alrededor de seiscientos millones de palabras. El dataset aquí disponible pertenece al mismo ámbito de medios colombianos, aunque no se ha trazado artículo por artículo como subconjunto de ese estudio ni constituye una muestra probabilística representativa.
 
-Se descartó el detector del experimento exploratorio (cuaderno 04, posterior a la Entrega 1) porque marcaba “cambio” por construcción y no distinguía cambio de ruido; se reemplazó por un modelo nulo.
-
-| Problema detectado | Por qué es un problema | Qué se hace ahora |
+| Línea | Referencias y aporte | Aplicación en esta entrega |
 | --- | --- | --- |
-| Regla “≥2 de 3 señales en el cuartil superior” | Marca \~25 % de los periodos por construcción, haya cambio o no | Se descarta; el umbral sale de permutaciones (modelo nulo) |
-| Periodos mixtos (bienio hasta 1989, trimestre desde 1990) | La resolución cambia a mitad de la serie | Resolución anual homogénea |
-| JS/coseno sin control del tamaño de muestra | Con pocos documentos la divergencia es alta solo por ruido | Se calcula el piso de ruido con permutaciones al mismo N |
-| Vocabulario top‑5000 dominado por nombres propios | Los “cambios” pueden ser de personajes, no de temas | Se mide el peso de entidades y se repite el análisis sin ellas |
-| Fuente confundida con tiempo | Un cambio de fuente parece un cambio de agenda | Todo se reporta por fuente; las permutaciones se estratifican por fuente |
-| Kleinberg sobre 150 términos con bins heterogéneos | Supone bins homogéneos; muy sensible a la elección de términos | Se sustituye por prevalencia de tópicos + segmentación binaria |
-| Deduplicación min‑hash ruidosa | Casi‑duplicados inflan frecuencias | Se reporta (\~1 %) y se deja como limitación |
+| Frecuencia de palabras y culturomics | Michel et al. (2011); Caicedo, Gaviria y Moreno (2012). Lectura cuantitativa de colecciones y series de frecuencia | Normalización por cantidad de texto; contextualización del corpus y cautela frente al sesgo mediático |
+| Agenda y cambio | McCombs y Shaw (1972); Baumgartner y Jones (1993); Comparative Agendas Project (CAP) | Marco para formular estabilidad y cambio; no se comprueba una teoría de agenda pública mediante la segmentación del corpus |
+| Modelos de tópicos | Lee y Seung (1999), NMF; Blei, Ng y Jordan (2003), LDA; modelos dinámicos, STM y BERTopic | NMF como base realizada; LDA, BERTopic y STM como alternativas futuras |
+| Representación | TF-IDF; Reimers y Gurevych (2019), Sentence-BERT | Contraste exploratorio de representaciones dispersas y densas, limitado a tareas de clasificación de fuente y periodo |
+| Análisis de cambios | Ráfagas de Kleinberg; segmentación temporal y PELT | Antecedente exploratorio de ráfagas; segmentación binaria actual; PELT como alternativa pendiente |
+| Estadística textual | Log-odds regularizado, NPMI y MATTR | Descripción de vocabulario distintivo, asociaciones y diversidad; separación entre cálculo válido y defectuoso |
 
-## 4. Del experimento exploratorio a la propuesta
+NMF representa cada documento como combinación aditiva de componentes con pesos no negativos. Permite leer cada componente mediante sus palabras principales y usarlo como unidad de análisis temporal. LDA ofrece una formulación probabilística de mezclas de tópicos. Los embeddings representan texto en un espacio denso y permiten explorar agrupaciones semánticas, aunque su desempeño depende del modelo, del dominio y del truncamiento. STM resulta pertinente para estudiar covariables de fuente y tiempo, sin que su uso por sí solo identifique efectos causales.
 
-**Entre la Entrega 1 y esta entrega probamos un primer acercamiento con TF‑IDF, divergencia léxica y ráfagas (cuaderno 04); funcionó como diagnóstico y sus defectos definen el diseño actual.** Fue un ejercicio exploratorio, no un modelo, y se hizo después del EDA de agenda (cuaderno 03), que fijó sus condiciones.
+El aporte específico es pasar de frecuencias de términos a composiciones documentales y comparar sus distancias con una referencia de muestreo. La hipótesis conceptual de estabilidad con cambios orienta las preguntas; encontrar cortes en una serie no demuestra equilibrio puntuado ni establece que la población cambió sus preocupaciones.
 
-**Lo que dejó el cuaderno 03 (EDA de agenda).** Cobertura desigual por fuente y año; tres resoluciones posibles (31 años; 125 trimestres con 5 vacíos; 373 meses con 17 vacíos); hora de publicación sin información; vocabulario que no se satura (305.904 tipos) y \~1 % de casi‑duplicados (408 grupos, 919 documentos).
+## 3. Ajustes respecto a la Entrega 1 y razones de los cambios
 
-**Lo que hizo el cuaderno 04.** Periodos adaptativos (5 bienios en 1980–89 y trimestres desde 1990: 93 periodos) y tres señales:
+La Entrega 1 y la propuesta inicial describieron el corpus, sus problemas de limpieza y la necesidad de caracterizar temas sin anotación manual completa. Los notebooks exploratorios 03 y 04 son antecedentes posteriores de la evolución metodológica. La Entrega 2, sustentada en las salidas guardadas de 05 y 06, incorpora medición documental, representaciones y un modelo explícito de tópicos.
 
-| Señal | Qué se calculó | Qué aprendimos |
+| Problema o decisión anterior | Razón para ajustar | Decisión actual y alcance |
 | --- | --- | --- |
-| Jensen‑Shannon | Distribución de los 5.000 términos más frecuentes (70,9 % de los tokens) en cada periodo frente al anterior | Depende del tamaño de muestra: periodos con pocos documentos parecen cambiar más solo por ruido |
-| TF‑IDF + distancia coseno | TF‑IDF de los documentos (88.542 términos, `min_df` 5, `max_df` 0,7) promediado por periodo; coseno entre periodos consecutivos | Los términos distintivos son sobre todo nombres propios; no hay referencia para saber qué distancia es grande |
-| Kleinberg (2002), 2 estados | Ráfagas en los 150 términos más frecuentes; cuenta de términos en ráfaga por periodo | Supone periodos homogéneos; aquí se mezclaban bienios y trimestres |
-| Regla combinada | Periodo “candidato” si ≥2 de las 3 señales están en su cuartil superior | Marcó 22 de 93 periodos (23,7 %), casi el 25 % que la regla produce por construcción |
+| Cifras resumidas como 32,8 millones de palabras | Se mezclaban conteos previos y definiciones de token | Reportar 31.896.684 tokens antes del filtro y 15.532.463 de contenido, cada uno con su definición |
+| Regla de candidato si dos de tres señales estaban en su cuartil superior | Un umbral relativo puede marcar candidatos sin calibrar la ausencia de cambio; la combinación no garantiza exactamente 25% | Sustituir por referencias de permutación y reportar magnitud junto a significación |
+| Bienios en los años 80 y trimestres desde 1990 | Los periodos tenían duraciones y tamaños distintos | Usar resolución anual homogénea y restringir comparaciones a años con N ≥ 40 |
+| Divergencias sin referencia de muestreo | Una muestra pequeña puede producir distancia aun sin cambio sistemático | Construir el nulo al mismo tamaño de los dos grupos, estratificado por fuente |
+| Vocabulario dominado por nombres propios | Aparición de personas puede confundirse con variación temática | Medir entidades proxy y examinar una variante sin palabras asociadas a entidades |
+| Interpretar una serie combinada como una sola agenda | La composición de fuentes cambia con el año | Dar prioridad a El Tiempo y distinguir series por fuente, combinada y estandarizada |
+| Comparar solo vocabulario o ráfagas de términos | Las señales no resumían mezclas temáticas documentales | Mantener TF-IDF como entrada y añadir NMF, θ y prevalencia anual |
+| Presentar un léxico como categorización externa validada | Es un recurso construido para el proyecto, sin gold standard | Usarlo como etiqueta débil y descriptor, inspirado en CAP/EuroVoc |
 
-**De ahí al diseño actual.** Cada defecto se tradujo en una decisión:
+Se mantiene el interés por la interpretación de tópicos, el contraste editorial y la evolución temporal. La cobertura efectiva de El Tiempo comienza en 1990, de modo que el intervalo principal se fija en 1990–2011. La normalización conserva el vínculo entre documento, fuente y fecha; la hora no se usa para inferir rutinas de publicación. La propuesta de modelado se acompaña de límites de cobertura y de validación que impiden confundir documentos archivados con la totalidad de los periódicos.
 
-1. La pregunta va primero: se mide estabilidad de la agenda (prevalencia de tópicos), no distancia entre vocabularios.
-2. Un modelo nulo por permutación reemplaza la regla del cuartil, y el umbral de cambio sale de los datos.
-3. Resolución anual única y N controlado por año.
-4. Todo por fuente, con permutaciones estratificadas.
-5. TF‑IDF se mantiene, pero como representación de entrada de un modelo de tópicos (NMF) y no como distancia directa entre periodos.
-6. Los eventos históricos se contrastan al final, con una lista congelada.
+## 4. Del experimento exploratorio al diseño actual
 
-## 5. Corpus y preprocesamiento
+Los análisis previos de agenda y divergencia léxica sirvieron para identificar decisiones que requerían control. En el experimento exploratorio se combinaron distribuciones de términos frecuentes, promedios TF-IDF y ráfagas de palabras. También se mezclaban resoluciones temporales para compensar la escasez de los años 80. Su función fue diagnóstica: mostró sensibilidad al volumen, a nombres propios y al calendario elegido.
 
-**El corpus tiene 91.585 artículos únicos (31,9 M de tokens) pero su cobertura es muy desigual: antes de 1990 solo hay Semana y El Tiempo aporta el 89 % de los documentos.** Es la copia fiel del conjunto `yabramuvdi/NoticiasColombia`, cargada con `utils.load_corpus()` (deduplicado por texto normalizado, checksum SHA‑256 verificado).
+| Señal exploratoria | Qué medía | Aprendizaje utilizado |
+| --- | --- | --- |
+| JS sobre términos frecuentes | Diferencia de distribuciones léxicas entre periodos | La distancia necesita una referencia de muestreo y una composición de fuentes controlada |
+| Distancia coseno entre promedios TF-IDF | Cambio en vocabulario ponderado | Un término distintivo puede ser una persona, una sección o una marca de formato |
+| Ráfagas de términos | Concentración temporal de palabras seleccionadas | La elección de términos y de intervalos condiciona la señal |
+| Regla combinada de cuartiles | Candidatos definidos por rangos relativos | Requiere calibración nula; no basta con acumular señales altas |
 
-| Fuente | Documentos | Años con datos | Observación |
+Estas observaciones llevan a una cadena con unidades explícitas: documento → vector de términos → composición de tópicos → agenda anual → distancia y segmentación. La fuente acompaña cada paso. El análisis histórico se reserva para después de la detección, evitando definir fronteras a partir de una narrativa histórica deseada.
+
+El EDA anterior había advertido vocabulario amplio y posibles casi duplicados. Las cifras de esos ejercicios usan preprocesamientos anteriores y no sustituyen los conteos actuales de 05. La deduplicación exacta del corpus medido tampoco garantiza eliminación de artículos casi iguales; esa dependencia sigue siendo una limitación y una tarea de validación futura.
+
+## 5. Corpus, preprocesamiento y alcance
+
+El corpus medido contiene 91.585 documentos con fechas válidas entre 1980 y 2011 y deduplicación por texto normalizado. Su cobertura está desequilibrada tanto por fuente como por año.
+
+| Fuente | Documentos | Porcentaje del corpus | Cobertura y observación |
 | --- | --- | --- | --- |
-| El Tiempo | 81.539 | 1990–2011 | 807 docs en 1990; caídas a 2.231 (1999) y 2.358 (2006) frente a 4–5 mil en años vecinos |
-| Semana | 6.620 | 1980–2011 (sin 1981) | 31–166 docs/año en los 80; 813 en 2011 |
-| Dinero | 3.426 | 1993–2011 (sin 1996) | menos de 100 docs/año hasta 2004; 532–668 entre 2007 y 2010 |
+| El Tiempo | 81.539 | 89,03% | 1990–2011; serie principal continua |
+| Semana | 6.620 | 7,23% | 1980–2011, sin 1981; única fuente antes de 1990 |
+| Dinero | 3.426 | 3,74% | 1993–2011, sin 1996; cobertura escasa en parte del intervalo |
+| Total | 91.585 | 100% | 31 años con datos; no es un censo de prensa colombiana |
 
-- **Tamaño:** 31.896.684 tokens; 15.532.463 tokens de contenido; 266.562 tipos; 42,3 % de hapax. Mediana de 245 palabras por artículo (media 348).
-- **Normalización:** `normalizar_texto` reconstruye cifras y horas que la tokenización de origen separó con espacios.
-- **Tokenización:** expresión regular sobre letras (con tilde y ñ), minúsculas, sin números. *Tokens de contenido* = sin stopwords (NLTK español + lista corta de periodismo) y longitud ≥ 3.
-- **Sin lematización:** spaCy sobre 32 M de tokens es demasiado lento en Colab gratis; se declara como limitación y mejora.
-- **Entidades (proxy):** palabras con mayúscula inicial a mitad de oración. Son el 22 % de los tokens de contenido en promedio (12–15 % en los años 80, 17–20 % desde 1990; el salto coincide con el cambio de fuente).
-- **Resolución temporal:** anual (31 años con datos). La hora de publicación es siempre 04:00 o 05:00 y no aporta información.
+Fuente: notebook 05, celda 7 y dataset medido. Los porcentajes tienen como denominador 91.585 documentos. El umbral de 40 documentos utilizado por 06 excluye años de una serie particular, sin retirar esos documentos del dataset completo.
 
-## 6. EDA avanzado (notebook 05)
+La normalización reconstruye cifras y horas separadas, elimina caracteres de control y mantiene las mayúsculas necesarias para el proxy de entidades. La tokenización extrae secuencias alfabéticas con letras acentuadas y ñ; los números y la puntuación quedan fuera de los tokens usados en las representaciones. Los tokens de contenido se convierten a minúsculas, excluyen stopwords en español y términos de la lista periodística utilizada, y tienen longitud mínima de tres caracteres. No se aplica lematización.
 
-**El vocabulario cambia con la época y con la fuente, pero buena parte de lo que parece “cambio temático” en el léxico es cambio de nombres propios y de fuente.** Cada técnica se corrió sobre el corpus completo.
+| Medida | Valor | Unidad o denominador |
+| --- | --- | --- |
+| Tokens alfabéticos antes del filtro de contenido | 31.896.684 | Ocurrencias, incluidas stopwords |
+| Tokens de contenido | 15.532.463 | Ocurrencias después de filtros |
+| Tipos de contenido | 266.562 | Formas distintas del vocabulario filtrado |
+| Hapax | 42,34% | Tipos con una aparición / 266.562 tipos |
+| Mediana de palabras por documento | 245 | Tokens antes del filtro de contenido |
+| Mediana de tokens de contenido | 122 | Documento |
+| Media de tokens de contenido | 169,596 | Documento |
 
-### 6.1 Diversidad léxica robusta al tamaño
+Fuente: notebook 05, celdas 10–11. La proporción de hapax es de tipos, no de tokens. El vocabulario sin lematización conserva variantes flexivas, nombres, grafías y ruido; una forma distinta no equivale necesariamente a un concepto nuevo.
 
-Se compara con muestras de igual tamaño (30.000 tokens por grupo) para que el N no distorsione.
+El corpus representa lo conservado en el archivo disponible. Sin metadatos completos de sección, edición, formato y procedimiento de extracción, una caída de volumen o un cambio de composición puede reflejar cobertura del archivo. El Tiempo es la serie principal por continuidad y tamaño, no porque represente toda la agenda nacional. Las fechas permiten agregar por año; la hora no tiene interpretación editorial en este análisis.
 
-Por qué no se usa la razón tipos/tokens (TTR) simple: crece o baja con la longitud del texto, así que un año con más artículos parecería más o menos diverso solo por tamaño. Por eso, para cada año y fuente se arma una muestra de artículos al azar hasta reunir 30.000 tokens de contenido; si el grupo no alcanza ese tamaño se omite. Sobre esa muestra se calculan tres medidas:
+## 6. EDA avanzado: diversidad, vocabulario y medidas temáticas
 
-- MATTR (moving‑average type‑token ratio): se desliza una ventana de 500 palabras, de a una palabra por vez; en cada posición se cuenta cuántas palabras distintas hay y se divide entre 500; se promedian todas las ventanas. 1 significa que ninguna palabra se repite; un valor menor, más repetición.
-- Yule's K: mide qué tan concentrado está el texto en pocas palabras repetidas y casi no depende de la longitud. Mayor K = vocabulario más repetitivo.
+### 6.1 Diversidad léxica con tamaño comparable
 
-```latex
-K = 10^{4}\,\frac{\sum_{m} m^{2}V_m - N}{N^{2}}
-```
+La razón tipos/tokens (TTR) es sensible a la longitud. Para comparar año y fuente, 05 usa una muestra fija de 30.000 tokens de contenido por grupo y omite los grupos que no alcanzan ese tamaño. Se obtienen 77 grupos: 25 de todas las fuentes, 22 de El Tiempo, 23 de Semana y siete de Dinero. Cada grupo tiene una muestra; no se estiman intervalos de incertidumbre.
 
-con N el número de tokens y V\_m el número de palabras distintas que aparecen exactamente m veces.
+MATTR promedia la TTR de ventanas móviles de 500 tokens. Valores mayores indican más formas distintas en una ventana de igual tamaño. Yule K resume concentración en formas repetidas: K = 10⁴ × (Σ m²Vₘ − N) / N², donde Vₘ es el número de tipos con frecuencia m y N es el total de tokens. Mayor K indica más concentración.
 
-- Ley de Heaps: el tamaño del vocabulario crece como V = k·N^β con el número de tokens N (se ajusta en escala logarítmica). Si β fuera cercano a 0 el vocabulario se cerraría; β ≈ 0,5 indica que sigue abriéndose con cada texto nuevo.
+![Diversidad léxica por año y fuente](figuras/fig_diversidad_lexica.png)
 
-&#91;image: MATTR y Yule's K por año y fuente\]
+**Figura 1.** MATTR y Yule K, notebook 05, celda 13; `diversidad_lexica.csv`. Cada punto usa 30.000 tokens de contenido; MATTR tiene ventana 500. Los grupos insuficientes no aparecen. Las líneas conectan los puntos disponibles y no representan observaciones en los años ausentes. No se muestran intervalos de confianza.
 
-La figura muestra MATTR (izquierda) y Yule's K (derecha) por año: todas las fuentes caen juntas hacia 2001 y 2004–05, y Dinero queda por encima en K.
+La figura presenta oscilaciones de MATTR y diferencias de concentración entre medios. En los años disponibles, Dinero muestra Yule K relativamente alto y MATTR relativamente bajo, compatible con un vocabulario más concentrado en esta muestra. Las caídas de diversidad alrededor de comienzos de los 2000 son descriptivas; no permiten decidir si cambió el estilo, la mezcla de secciones o la extracción del archivo. Igualar tokens reduce un sesgo de tamaño, pero no controla todas esas diferencias.
 
-- **MATTR** (ventana 500) baja de \~0,80 en los años 80–90 a \~0,75 en los 2000. Cae a la vez en las tres fuentes hacia 2001 y 2004–05, lo que sugiere un cambio de formato o de secciones en el archivo y no un cambio de estilo de los periodistas.
-- **Yule's K** (concentración): \~3–3,5 en El Tiempo, 3,3–4,6 en Semana y 4,3–5,5 en Dinero; el vocabulario de Dinero es el más repetitivo (léxico financiero).
-- **Ley de Heaps** V = K·N^β: β = 0,46 global, 0,46 El Tiempo, 0,50 Semana y 0,51 Dinero. El vocabulario no se satura (nombres, cifras, neologismos): no se puede “cerrar”.
+La ley de Heaps se ajusta como V = k × N^β, relacionando tipos y tokens acumulados en documentos ordenados aleatoriamente. Los exponentes son aproximadamente 0,460 para el conjunto, 0,460 para El Tiempo, 0,498 para Semana y 0,508 para Dinero (05, celda 14). Describen crecimiento sublineal del vocabulario en el rango observado. No demuestran que este crezca indefinidamente ni que no pueda saturarse fuera de la muestra.
 
-### 6.2 Colocaciones (NPMI)
+### 6.2 Bigramas y trigramas: conteos y defecto del cálculo NPMI
 
-Cómo se calcula. Se cuentan pares de palabras adyacentes en las que ambas son de contenido (no stopwords) y cada una aparece al menos 30 veces. La fuerza de asociación es la NPMI (información mutua puntual normalizada), la misma fórmula de la sección 9.2 pero con p(a,b) = frecuencia del par adyacente: vale 1 cuando las dos palabras solo aparecen juntas y 0 cuando aparecen juntas lo esperado por azar. Los trigramas se arman uniendo dos bigramas con NPMI de al menos 0,4. Sirve para detectar expresiones fijas y nombres compuestos que un modelo de unigramas parte en piezas.
+Se examinaron 12.205 pares candidatos con al menos 30 apariciones y se exportaron 2.000 filas. La NPMI teórica de un par es ln[p(a,b)/(p(a)p(b))] / [−ln p(a,b)], con probabilidades compatibles y rango de −1 a 1. En 05, la probabilidad conjunta usa el total de pares elegibles y las marginales usan el total de tokens de contenido. Esa mezcla de espacios muestrales produce 383 de 2.000 puntuaciones mayores que 1, con máximo 1,2549. Por ello, **el ranking exportado no se interpreta como asociación NPMI válida**.
 
-12.205 bigramas con n ≥ 30. Los de mayor NPMI son nombres extranjeros (*wall street*, *hong kong*, *são paulo*) y expresiones fijas (*derechos humanos*, 3.574; *naciones unidas*, 1.735; *América Latina*, 3.768). Los trigramas más frecuentes son políticos: *Juan Manuel Santos* (1.292), *presidente Álvaro Uribe* (1.152), *producto interno bruto* (534), *Fondo Monetario Internacional* (504), *presidente Ernesto Samper* (498).
+Los conteos observados siguen siendo útiles como ejemplos, con la advertencia de que su selección se hizo mediante el cálculo defectuoso.
 
-| Época | Colocaciones frecuentes |
+| Expresión | Ocurrencias observadas | Interpretación permitida |
+| --- | --- | --- |
+| derechos humanos | 3.574 | Conteo de pares adyacentes elegibles |
+| américa latina | 3.768 | Conteo de pares adyacentes elegibles |
+| wall street | 857 | Conteo de pares adyacentes elegibles |
+| juan manuel santos | 1.292 | Conteo de trigrama entre candidatos seleccionados |
+| producto interno bruto | 534 | Conteo de trigrama entre candidatos seleccionados |
+
+Fuente: notebook 05, celda 16. Son ocurrencias, no número de documentos ni puntuaciones de asociación. La eliminación de puntuación puede permitir pares que cruzan límites de oración. Los trigramas dependen de pares seleccionados con el umbral NPMI defectuoso. No se comparan épocas mediante estas cuentas sin normalizar ni se incorporan esos bigramas al modelo NMF actual.
+
+### 6.3 Términos distintivos mediante log-odds
+
+El log-odds con prior de Dirichlet compara la frecuencia de una palabra en un grupo con su frecuencia en el resto, regularizando términos poco frecuentes con información del corpus. En forma resumida, δ̂w = ln[(yAw + αw)/(nA + α₀ − yAw − αw)] − ln[(yBw + αw)/(nB + α₀ − yBw − αw)]; el estadístico z divide δ̂w por su error estimado. Un z mayor identifica una diferencia regularizada, no la relevancia social de una palabra.
+
+| Comparación | Ejemplos persistidos de términos distintivos |
 | --- | --- |
-| 1980–89 | opinión pública, fuerzas armadas, Unión Soviética, Vargas Llosa, presidente Betancur |
-| 1990–99 | derechos humanos (1.223), medio ambiente (1.182), servicios públicos, Ernesto Samper |
-| 2000–11 | señor director (1.889), presidente Uribe (1.737), Corte Suprema (1.639), Juan Manuel |
+| 1980–1989 frente al resto | reagan, norteamericano, betancur, barco, soviéticos |
+| 1990–1999 frente al resto | samper, ernesto, clinton, gaviria, constituyente |
+| 2000–2011 frente al resto | uribe, farc, chávez, santos, internet, paramilitares |
+| El Tiempo frente al resto | calle, municipio, alcalde, cali, barrio |
+| Semana frente al resto | guerra, farc, uribe, paramilitares, política |
+| Dinero frente al resto | crecimiento, empresas, mercado, exportaciones, inversión |
 
-### 6.3 Términos distintivos (log‑odds con prior de Dirichlet)
+Fuente: notebook 05, celda 19. Se muestran ejemplos de las listas guardadas, sin afirmar un orden exhaustivo ni añadir valores z. Las listas también contienen marcas como `foto`, `com` o `www`, lo que evidencia que los términos distintivos pueden capturar formato y ruido. Época y fuente están correlacionadas; las comparaciones temporales no aíslan un efecto del tiempo.
 
-Cómo se calcula. Una palabra es distintiva de un grupo (una época o una fuente) si es mucho más frecuente en él que en el resto. Para no premiar palabras rarísimas se usa el estadístico de log‑odds con prior informativo de Dirichlet (Monroe, Colaresi y Quinn, 2008):
+### 6.4 Coocurrencias documentales y sus límites
 
-```latex
-\hat\delta_w=\ln\frac{y^{A}_w+\alpha_w}{n^{A}+\alpha_0-y^{A}_w-\alpha_w}-\ln\frac{y^{B}_w+\alpha_w}{n^{B}+\alpha_0-y^{B}_w-\alpha_w},\qquad z_w=\frac{\hat\delta_w}{\sqrt{\sigma^{2}_w}}
-```
+La matriz usa presencia binaria en artículos, un vocabulario de 20.000 términos y un mínimo de 20 documentos de coocurrencia. Dentro de cada época, PMI(a,b) = ln[p(a,b)/(p(a)p(b))], con marginales y conjuntas definidas sobre los documentos de esa época. Aunque el análisis previo se denominaba PPMI, el código no aplica formalmente max(0, PMI). Se informa como PMI documental filtrada.
 
-donde y es la cuenta de la palabra w en cada grupo, n el total de palabras del grupo y α un prior proporcional a la frecuencia en todo el corpus (“una palabra se supone tan frecuente como en el corpus hasta que los datos digan lo contrario”). El z‑score divide por la incertidumbre: una palabra con z alto es distintiva y está respaldada por suficientes datos. Cada época y cada fuente se compara contra el resto.
+Las listas persistidas sugieren contextos diferentes: `salud` aparece con `contributivo`, `sisben`, `eps` e `ips` en los 90, y con `fosyga` o `dengue` en los 2000; `economía` presenta `pib` y `recesión` en los 90, y `greenspan`, `bernanke` o `fed` en los 2000; `guerrilla` aparece con `subversión` y `tirofijo` en los 90, y con `secretariado`, `caguán` y `jojoy` en los 2000 (05, celda 21).
 
-- **Por época:** 1980–89: *Reagan, norteamericano, Betancur, Barco, soviéticos*; 1990–99: *Samper, Clinton, Gaviria, constituyente, Bosnia*; 2000–11: *Uribe, FARC, Chávez, Santos, paramilitares, víctimas, referendo, TLC, internet*.
-- **Por fuente:** El Tiempo: *calle, alcalde, municipio, barrio, Cali* (agenda local); Semana: *guerra, FARC, Uribe, paramilitares, política* (agenda nacional y conflicto); Dinero: *crecimiento, empresas, mercado, exportaciones, inversión* (economía).
+Estas listas ilustran vecindades de uso, sin acreditar por sí solas un cambio semántico ni la fuerza de cada asociación, pues no se presentan sus puntuaciones. Cuando una semilla no tiene vecinos suficientes, ordenar el vector puede devolver candidatos con valor −∞. Las listas de `corrupción`, `empleo` y `fútbol` en los años 80 se descartan como evidencia de asociación por ese problema; no se les asigna interpretación histórica.
 
-### 6.4 Co‑ocurrencias (PPMI por documento)
+### 6.5 Entidades proxy: tres denominadores distintos
 
-Cómo se calcula. Se eligen términos semilla (violencia, paz, economía, guerrilla, corrupción, salud, empleo, fútbol). Para cada época se mide con qué palabras aparece cada semilla en el mismo artículo más de lo esperado por azar, mediante la información mutua puntual positiva:
+El proxy identifica palabras con mayúscula a mitad de oración. No es reconocimiento de entidades nombradas: puede omitir nombres al inicio de oración y depender de capitalización, títulos y formato. Es una señal para explorar el peso de nombres, no una anotación semántica completa.
 
-```latex
-\mathrm{PPMI}(a,b)=\max\!\Big(0,\ \ln\frac{p(a,b)}{p(a)\,p(b)}\Big)
-```
-
-con p(a,b) la fracción de artículos de la época que contienen ambas. Las diez palabras con mayor PPMI son los vecinos. Si los vecinos de un mismo término cambian entre épocas, el concepto cambió de contexto, aunque su frecuencia no cambie.
-
-El contexto de un mismo concepto cambia entre épocas. “Salud” pasa de términos genéricos en los 80 a *contributivo, Sisbén, EPS, IPS* en los 90 y *Fosyga, dengue* en los 2000. “Economía” pasa de *crecimiento, producción* a *PIB, recesión* (90) y *Greenspan, Bernanke, Fed* (2000). “Guerrilla” pasa de *ejército, militares* a *Tirofijo, subversión* (90) y *Caguán, secretariado, Jojoy* (2000). Las vecindades de 1980–89 para *corrupción, empleo* y *fútbol* son ruido (pocas co‑ocurrencias en una sola fuente) y no deben interpretarse.
-
-### 6.5 Entidades
-
-Los nombres propios son el 22 % de los tokens de contenido. Si los cambios se debieran a personajes, el análisis tendría que separarlos; por eso la robustez incluye una variante sin entidades.
-
-Cómo se mide: un token cuenta como entidad si empieza con mayúscula a mitad de oración y no está todo en mayúsculas; la fracción por año es entidades / tokens de contenido. En los años 80 es 12–15 % y desde 1990 sube a 17–20 %: el salto de 1989 a 1990 coincide exactamente con el cambio de fuente (de Semana a El Tiempo), así que es un efecto de fuente y no de época. Es otra razón para no leer el salto 1989–1990 como cambio de agenda.
-
-&#91;image: Fracción de tokens que son entidades por año\]
-
-### 6.6 Léxico temático externo (inspirado en CAP y EuroVoc)
-
-Se construyó un léxico de 13 categorías (conflicto armado, narcotráfico, política, justicia, economía, empleo, salud, educación, deporte, cultura, ambiente, internacional, infraestructura) expandido por prefijos contra el vocabulario: cubre 2.319 palabras y el 6,8 % de los tokens. Es una medida *model‑free* de agenda (tokens de la categoría por mil tokens) con la misma normalización que Caicedo et al. (2012). En su serie anual, el narcotráfico alcanza su máximo en 1987–89, el conflicto armado en 2001–02, la economía en 1999–2002 y justicia/crimen crece desde 2005; los años 80 son ruidosos por el N pequeño (31–166 documentos por año).
-
-Cómo se mide la prevalencia léxica: para cada año, tokens del léxico de cada categoría por mil tokens, dividido por el promedio de esa categoría en todos los años (1 = promedio; 2 = el doble). Así categorías muy distintas en tamaño se pueden comparar en un mismo mapa de calor. No usa ningún modelo ni etiquetas humanas.
-
-&#91;image: Prevalencia léxica por año y categoría\]
-
-Qué se ve: narcotráfico en 1987–89 (rojo oscuro), conflicto armado con máximos en 2001–02, economía y empleo entre 1999 y 2002, justicia y crimen en alza desde 2005, deporte hacia 2009–11 y cultura concentrada en 1985–86. Las filas de los años 80 son ruidosas por el N pequeño (31–166 artículos por año); se muestran, pero no se interpretan.
-
-### 6.7 Resumen de hallazgos del EDA y decisiones que implican
-
-| Hallazgo | Evidencia | Decisión en el modelo |
+| Medida | Resultado | Denominador y ponderación |
 | --- | --- | --- |
-| La fuente está confundida con el tiempo | 1980–89 solo Semana; El Tiempo desde 1990; la fracción de entidades salta de 12–15 % a 17–20 % en 1990 | Serie principal: El Tiempo 1990–2011; permutaciones estratificadas por fuente |
-| El vocabulario no se cierra | β de Heaps = 0,46; 42,3 % de los tipos aparecen una sola vez | Filtrar por frecuencia (min\_df 15, max\_df 0,4, 25.000 términos) |
-| Los nombres propios pesan | 22 % de los tokens de contenido; los términos distintivos por época son gobernantes y coyunturas | Variante sin entidades en la robustez |
-| La diversidad léxica cae a la vez en las tres fuentes | MATTR baja de \~0,80 a \~0,75; mínimos en 2001 y 2004–05 | Posible cambio de formato del archivo: desconfiar de cambios cercanos (1999–2001, 2006) |
-| Dinero es más repetitivo | Yule's K de 4,3 a 5,5 frente a \~3,3 en El Tiempo | Esperar tópicos de mercados (bolsa, café, petróleo, oro) que fragmentan lo económico |
-| Las expresiones se parten al usar unigramas | derechos humanos, naciones unidas, Juan Manuel Santos | Mejora propuesta: bigramas NPMI como rasgos |
-| Un mismo concepto cambia de contexto | guerrilla pasa de subversión a Cagudán y secretariado; salud, de genérico a Sisbén y Fosyga | La agenda cambia también por vocabulario dentro de un tema; NMF de unigramas puede dispersarlo |
-| El léxico temático coincide con la historia conocida | narcotráfico 1987–89, conflicto armado 2001–02, economía 1999–2002 | Referencia externa para validar los tópicos |
-| Los años 80 son ruido | 31–166 artículos por año, una sola fuente | Se describen, no se contrastan |
+| Media de fracción por documento | 21,956% | Media de n_entidades/max(n_tokens,1); cada documento pesa igual |
+| Fracción global de tokens | 18,250% | Σ n_entidades / 15.532.463 tokens de contenido |
+| Media de fracciones anuales | 16,821% | Media simple de 31 cocientes anuales; cada año pesa igual |
 
-## 7. Dataset medido
+Fuente: notebook 05, celdas 10 y 23, `resumen_05.json` y dataset medido. Los valores son compatibles porque ponderan de manera diferente. Decir que el 22% de todos los tokens son entidades confundiría la primera medida con la segunda.
 
-**El notebook 05 exporta `corpus_medido.parquet` con 91.585 filas y 15 columnas, más una muestra de 2.000 filas en CSV para inspección rápida.** El notebook 06 añade `theta_documentos.csv.gz`, con la distribución de cada documento sobre los 40 tópicos.
+![Fracción anual de entidades proxy](figuras/fig_entidades.png)
 
-| Columna | Contenido |
+**Figura 2.** Fracción anual de tokens de contenido identificados como entidades proxy: suma de entidades / suma de tokens del año. Fuente: notebook 05, celda 23. La línea corresponde al conjunto de fuentes; no representa la media de fracciones por documento. El rango anual publicado es aproximadamente 11,9–19,6%.
+
+El aumento alrededor de 1990 coincide con la entrada de El Tiempo y el cambio de composición de fuentes. Esa coincidencia exige cautela: la serie combinada no permite separar un efecto de época de uno de fuente o archivo. La variante sin entidades de 06 aplica otra definición: elimina 22.683 palabras con al menos cinco apariciones y al menos 50% de sus usos identificados como entidad proxy, asociadas aproximadamente al 14,9% de los tokens. Este porcentaje tampoco equivale al conteo de ocurrencias proxy de 05.
+
+### 6.6 Recurso léxico temático: decisión y cobertura
+
+Se utiliza un léxico propio inspirado en CAP y EuroVoc. No se incorporó una ontología externa formal ni se realizó su validación como tesauro. Se eligió este recurso para obtener una descripción transparente de categorías y una etiqueta inicial auditable, dado que el corpus carece de temas anotados a mano.
+
+El léxico contiene 13 categorías: conflicto armado, narcotráfico, política/gobierno, justicia/crimen, economía/finanzas, empleo/trabajo, salud, educación, deporte, cultura/entretenimiento, ambiente/energía, internacional e infraestructura/vivienda. La expansión por prefijos contra el vocabulario cubre 2.319 tipos y el 6,755% de los tokens de contenido. El 86,832% de los documentos recibe categoría inicial con el umbral de al menos dos hits totales. Cobertura de tokens y fracción de documentos categorizados son medidas distintas.
+
+![Prevalencia relativa de categorías léxicas](figuras/fig_lexico_prevalencia.png)
+
+**Figura 3.** Prevalencia léxica anual relativa al promedio de cada categoría. Fuente: notebook 05, celdas 25–26 y `prevalencia_lexico_por_anio.csv`. Se cuentan hits por mil tokens de contenido y se divide por la media anual de la categoría. El valor 1 es el promedio de esa fila; 2 es el doble. Los colores no comparan tamaños absolutos entre categorías.
+
+Se observan valores relativos altos de narcotráfico hacia 1987–1989, conflicto armado hacia 2001–2002 y economía alrededor del cambio de siglo. Son señales descriptivas del léxico y de la colección, especialmente sensibles a la cobertura temprana. Un prefijo puede incluir usos polisémicos o excluir sinónimos. La categoría inicial selecciona el máximo de hits y los empates favorecen el orden del léxico; por ello, es una etiqueta débil, no verdad de referencia ni validación externa independiente de NMF.
+
+## 7. Dataset medido e identidad documental
+
+El notebook 05 exporta `corpus_medido.parquet`, con 91.585 filas y 15 columnas, y `corpus_medido_muestra.csv`, con 2.000 filas para inspección. La muestra legible no reemplaza el dataset completo. El notebook 06 añade `theta_documentos.csv.gz`, con una composición de 40 tópicos y tópico dominante para cada documento.
+
+| Variable | Definición y uso |
 | --- | --- |
-| `id`, `fuente`, `fecha`, `año` | identificador original, fuente (sin `www.`/`.com` en el 06), fecha y año |
-| `texto_limpio` | texto tras `normalizar_texto` |
-| `tokens` | tokens de contenido separados por espacio (sin stopwords, longitud ≥ 3) |
-| `n_chars`, `n_palabras` | longitud en caracteres (mediana 1.565) y en palabras (mediana 245) |
-| `n_tokens`, `n_types`, `ttr` | tokens de contenido (media 170), tipos (media 129) y TTR (media 0,82) |
-| `n_entidades`, `frac_entidades` | tokens que son entidades proxy y su fracción (media 0,22) |
-| `categoria_inicial`, `n_hits_lexico` | categoría del léxico temático con más aciertos (≥ 2) o `sin_categoria`, y número de aciertos |
+| id | Identificador estable del documento; clave de unión con θ |
+| fuente | Dominio original del medio; 06 usa abreviaturas equivalentes |
+| fecha | Fecha parseada; su hora no tiene interpretación editorial |
+| año | Año extraído de fecha, unidad de agregación |
+| texto_limpio | Texto normalizado, conservando mayúsculas |
+| tokens | Cadena de tokens de contenido unidos por espacios |
+| n_chars | Número de caracteres del texto normalizado |
+| n_palabras | Tokens alfabéticos antes del filtro de stopwords |
+| n_tokens | Número de tokens de contenido |
+| n_types | Tipos distintos en el documento |
+| ttr | n_types/max(n_tokens,1), descriptor dependiente de longitud |
+| n_entidades | Ocurrencias del proxy por mayúscula |
+| frac_entidades | n_entidades/max(n_tokens,1) |
+| categoria_inicial | Categoría con más hits si total ≥ 2; de lo contrario, sin categoría |
+| n_hits_lexico | Total de hits de las 13 categorías |
 
-La categoría inicial es una etiqueta débil (léxico por prefijos, sin supervisión humana) pensada como punto de partida y como referencia para validar los tópicos, no como verdad.
+Fuente: notebook 05, celda 28. Las longitudes, diversidad y entidades acompañan a los textos y permiten estudiar si las diferencias temáticas se relacionan con composición documental. No deben emplearse las categorías débiles como etiquetas humanas de evaluación.
 
-## 8. Representación del texto
+El archivo θ contiene 91.585 identificadores únicos. La unión se realiza por `id`, no por posición de fila. Las columnas de composición son T00–T39; sus valores se exportan con cinco decimales, de modo que su suma puede diferir ligeramente de 1 por redondeo. La normalización anterior a la exportación produce composiciones de suma 1 y no deja vectores vacíos.
 
-**TF‑IDF disperso fue la mejor representación para separar periodo y fuente (macro‑F1 0,558 y 0,527) y es además la que permite leer los tópicos; los embeddings multilingües quedaron últimos (0,390 y 0,439).**
+La inspección estructural del parquet completo confirma ausencia de valores nulos en las 15 columnas y de textos o cadenas de tokens vacíos. Los conteos de tokens, tipos y caracteres coinciden con las cadenas exportadas; año coincide con fecha y la fracción de entidades con su cociente documental. Es un control de integridad del archivo, no una validación de etiquetas ni una nueva corrida de modelos.
 
-- **BoW:** cada documento es un vector de conteos sobre el vocabulario; sirve de base para ver qué términos aparecen (muy disperso: un artículo usa una fracción mínima de los 22.196 términos).
-- **TF‑IDF:** pondera cada término por su frecuencia en el documento (escala sublineal) y su rareza en el corpus. Parámetros: `min_df` 15, `max_df` 0,4, 25.000 términos como máximo (22.196 efectivos), ajustado sobre una muestra balanceada de 1.000 documentos por año.
-- **Embeddings:** `paraphrase-multilingual-MiniLM-L12-v2` (384 dimensiones) sobre los primeros 700 caracteres, ventana de 128 tokens.
+La entrega incluye los datos medidos completos, muestra CSV, notebooks con salidas guardadas y resultados necesarios. La identidad documental conserva la conexión entre texto, mediciones y modelo, requisito esencial para inspeccionar ejemplos y evitar que un cambio de orden de filas altere las correspondencias.
 
-Comparación con validación cruzada de 5 particiones sobre una muestra estratificada por año (hasta 150 documentos por año). El objetivo “periodo” tiene 4 clases (80–89, 90–99, 00–05, 06–11); “fuente” tiene 3.
+## 8. Representación del texto y ejemplo real
 
-### 8.1 Cómo se calcula cada vector
+### 8.1 Opciones y dimensiones
 
-Un modelo no lee palabras, lee números. Representar un artículo es convertirlo en un vector (una lista de números). Las cuatro opciones comparadas son:
-
-| Representación | Idea | Cada artículo es… | Parámetros usados |
+| Representación | Significado de coordenadas | Dimensión por documento | Uso realizado |
 | --- | --- | --- | --- |
-| BoW (bolsa de palabras) | contar cuántas veces aparece cada palabra | un vector de 22.196 conteos, casi todos 0 | vocabulario del TF‑IDF |
-| TF‑IDF | conteo ponderado por lo rara que es la palabra | el mismo vector con pesos reales, normalizado a longitud 1 | min\_df 15, max\_df 0,4, máximo 25.000 términos, escala sublineal |
-| TF‑IDF + SVD | comprimir TF‑IDF a pocas dimensiones | un vector denso de 128 números | SVD truncada, 128 componentes |
-| Embeddings | una red neuronal preentrenada resume el texto | un vector denso de 384 números | MiniLM‑L12 multilingüe, primeros 700 caracteres, ventana de 128 tokens |
+| Bolsa de palabras (BoW) | Conteo de cada término del vocabulario | 22.196 | Ejemplo de transformación y base interpretativa |
+| TF-IDF disperso | Frecuencia ponderada por rareza documental | 22.196 | Clasificación exploratoria y entrada de NMF |
+| TF-IDF + SVD | Combinaciones lineales de coordenadas TF-IDF | 128 | Clasificación exploratoria |
+| MiniLM-L12 multilingüe | Coordenadas densas de un modelo preentrenado | 384 | Clasificación exploratoria con texto truncado |
 
-Fórmula de TF‑IDF (scikit‑learn con escala sublineal y suavizado):
+El vectorizador TF-IDF se ajusta con hasta 1.000 documentos por año, 22.534 en total. La muestra equilibra parcialmente el año, no la fuente. Sus parámetros son min_df = 15, max_df = 0,4, máximo de 25.000 términos, frecuencia sublineal y normalización L2. El vocabulario efectivo contiene 22.196 términos. Al transformar todos los documentos, la matriz tiene dimensión 91.585 × 22.196 y densidad aproximada de 0,518% (06, celda 9).
 
-```latex
-\mathrm{tfidf}(t,d) = \big(1+\ln \mathrm{tf}(t,d)\big)\cdot\Big(\ln\frac{1+N}{1+\mathrm{df}(t)}+1\Big)
-```
+Para un término presente, el peso antes de normalización es (1 + ln tf(t,d)) × [ln((1 + N)/(1 + df(t))) + 1]. Aquí tf es el conteo en el documento, df el número de documentos de ajuste que contienen el término y N el tamaño de la muestra de ajuste. El vector se divide por su norma euclidiana. Un término ausente pesa cero; los pesos TF-IDF no son probabilidades y no tienen que sumar 1.
 
-donde tf es cuántas veces aparece la palabra t en el artículo d, df es en cuántos artículos aparece y N es el total de artículos. Después cada vector se divide por su longitud euclidiana. La primera parte premia la repetición, pero con rendimientos decrecientes (el logaritmo); la segunda castiga las palabras que aparecen en casi todos los artículos.
+SVD comprime esos pesos a 128 componentes, cuya coordenada deja de corresponder a una palabra. MiniLM produce 384 coordenadas con `paraphrase-multilingual-MiniLM-L12-v2`; usa solo los primeros 700 caracteres y una longitud máxima de secuencia de 128 tokens. La comparación, por tanto, no evalúa embeddings sobre artículos completos.
 
-Ejemplo ilustrativo (números inventados para mostrar el cálculo): con N = 10.000 artículos, la palabra “farc” aparece 3 veces en un artículo y está en 800 artículos: (1 + ln 3) × (ln(10.001/801) + 1) = 2,10 × 3,52 ≈ 7,4. La palabra “gobierno”, también con 3 apariciones pero presente en 3.000 artículos, pesa 2,10 × 2,20 ≈ 4,6. A igual frecuencia, la palabra más específica pesa más.
+### 8.2 Documento 13312 → BoW → TF-IDF
 
-SVD (descomposición en valores singulares truncada) proyecta los 22.196 pesos a 128 combinaciones lineales que conservan la mayor varianza; se pierde interpretabilidad (una dimensión ya no es una palabra) a cambio de un vector pequeño y denso. Los embeddings los produce un modelo de lenguaje entrenado con frases de muchos idiomas para que textos de significado parecido queden cerca; aquí se usan los primeros 700 caracteres de cada artículo y los vectores se normalizan.
+El ejemplo de la salida original de 06 corresponde a **id 13312, Dinero, 1 de abril de 2005**, con el encabezado “Empleo: ¿cuestión de ley?”. El comienzo del texto es:
 
-### 8.2 La tarea de comparación: qué es el macro‑F1
+> En estos días se va a iniciar el debate acerca de la conveniencia de mantener vigente la ley laboral 789 de 2002, mediante la cual se flexibilizó el mercado laboral para estimular la generación y formalización del empleo en el país.
 
-Necesitamos una vara común para decidir qué representación conserva más información útil. Como nuestro problema es ver cómo cambia el texto con el tiempo y entre medios, la prueba es: darle a un clasificador solo el vector de un artículo y pedirle que adivine cuándo o dónde se publicó. Si la representación conserva lo que distingue épocas y medios, el clasificador acierta más.
+El texto se muestra como extracto; no es el artículo completo. La salida BoW tiene 186 términos no nulos de 22.196, aproximadamente 0,84% de sus coordenadas. Seis conteos seleccionados de la salida son `acerca: 1`, `actuar: 1`, `ahí: 1`, `alternativas: 1`, `amplió: 1` y `andes: 1`. Esa selección no es el listado de términos más frecuentes ni el vector completo.
 
-- Objetivo “periodo” (4 clases): 1980–89, 1990–99, 2000–05 y 2006–11.
-- Objetivo “fuente” (3 clases): El Tiempo, Semana y Dinero.
-- Muestra: hasta 150 artículos por año (unos 4.000 en total), para que los años grandes no dominen y los embeddings sean viables en Colab gratis.
-- Clasificador: un modelo lineal. LinearSVC para el TF‑IDF disperso y regresión logística para SVD y embeddings.
-- Validación cruzada estratificada de 5 particiones: los artículos se reparten en 5 grupos que conservan la proporción de cada clase; se entrena con 4 grupos, se evalúa con el quinto y se repite 5 veces. Ningún artículo se evalúa con un modelo que lo vio al entrenar. Las clases con menos de 5 artículos se excluyen.
+| Término | Peso TF-IDF | Término | Peso TF-IDF |
+| --- | --- | --- | --- |
+| empleo | 0,178 | puestos | 0,126 |
+| laboral | 0,160 | vigente | 0,115 |
+| ley | 0,150 | debate | 0,114 |
+| reforma | 0,145 | trabajo | 0,103 |
+| trabajadores | 0,131 | calidad | 0,101 |
 
-Cuatro conceptos, de menor a mayor:
+Fuente: notebook 06, celda 9. Son las diez coordenadas de mayor peso mostradas por la salida, redondeadas a tres decimales. El resto del vector se omite para lectura; no se reconstruyen pesos ni se inventan coordenadas. En la proyección NMF exportada, el tópico dominante de este documento es T21, asociado a términos como congreso, proyecto y ley; su peso exportado es 0,30183. La mezcla también asigna peso a otros tópicos, coherente con que un artículo trate varios aspectos.
 
-- Precisión de una clase: de los artículos que el modelo etiquetó como esa clase, qué fracción lo era.
-- Recall (cobertura) de una clase: de los artículos que realmente eran de esa clase, qué fracción encontró.
-- F1 de una clase: la media armónica de ambos, F1 = 2·P·R / (P + R). Es alta solo si precisión y recall son altos a la vez.
-- Macro‑F1: el promedio simple de los F1 de todas las clases, sin ponderar por tamaño. Cada clase pesa igual.
+### 8.3 Clasificación exploratoria y macro-F1
 
-Por qué macro y no exactitud (accuracy): El Tiempo es el 89 % del corpus. Un clasificador que respondiera siempre “El Tiempo” tendría 89 % de exactitud, pero su F1 sería 0,94 para El Tiempo y 0 para las otras dos fuentes: macro‑F1 = 0,31. El macro‑F1 obliga a acertar también las clases pequeñas.
+Se examina si cada representación conserva señales para predecir periodo y fuente. Periodo usa cuatro clases: 1980–1989, 1990–1999, 2000–2005 y 2006–2011. Fuente usa tres clases. La muestra contiene 3.927 documentos, con hasta 150 por año, y validación cruzada estratificada de cinco particiones.
 
-Ejemplo ilustrativo con 100 artículos (números inventados para mostrar el cálculo):
+Para una clase, precisión = VP/(VP + FP), recall = VP/(VP + FN) y F1 = 2PR/(P + R). Macro-F1 es la media simple del F1 de las clases, dando a cada clase igual peso. Es útil ante desbalance, pero no elimina correlación entre año y fuente ni sustituye una línea base evaluada. El macro-F1 de un predictor aleatorio depende de la distribución y del protocolo; no se presenta 0,25 o 0,33 como un control ejecutado.
 
-| Real \\ Predicho | El Tiempo | Semana | Dinero | Total real |
+| Representación y clasificador | Macro-F1 periodo | Macro-F1 fuente | Tiempo informado |
+| --- | --- | --- | --- |
+| TF-IDF + LinearSVC | 0,558 | 0,527 | No medido |
+| TF-IDF + SVD + regresión logística | 0,448 | 0,495 | 1,690 s para transformación SVD |
+| MiniLM + regresión logística | 0,390 | 0,439 | 10,078 s para codificación de la muestra |
+
+Fuente: notebook 06, celda 10 y `comparacion_representaciones.csv`. El 0,0 de tiempo TF-IDF es un literal del código, no una medición. Los otros tiempos excluyen la validación cruzada; la descarga del modelo está fuera del reloj. No constituyen un benchmark comparable de coste total.
+
+La combinación TF-IDF + LinearSVC logra los valores mayores en este protocolo, pero cambia el clasificador respecto a las opciones densas. Además, TF-IDF se ajustó antes de la validación cruzada y SVD fuera de las particiones. Aunque el clasificador evalúe documentos retenidos, la representación aprendió información del conjunto antes de dividirlo: hay fuga de información. No se realizó validación temporal limpia ni se publican controles nuevos con el mismo clasificador.
+
+Se adopta TF-IDF como entrada base de NMF por la interpretación directa de palabras, su estructura dispersa y su compatibilidad con componentes no negativos. La clasificación exploratoria aporta un diagnóstico condicionado por el protocolo; no prueba superioridad semántica, calidad de tópicos, ni que el rendimiento diferente de MiniLM se deba a ignorar nombres o estilos. Esa explicación exigiría experimentos adicionales.
+
+## 9. Metodología realizada: NMF y agenda anual
+
+### 9.1 Factorización, ajuste y composición
+
+Para la muestra de ajuste, V ≈ W × H, con V de tamaño 22.534 × 22.196, W de tamaño 22.534 × K y H de tamaño K × 22.196, todas no negativas. H define componentes mediante pesos de palabras; W representa su contribución al documento. El ajuste usa hasta 150 iteraciones y tolerancia 10⁻³. Las dos semillas examinadas también cambian la inicialización: nndsvda frente a una aleatoria. La estabilidad obtenida no separa esos dos factores.
+
+Se transforma después el corpus completo. Para cada documento d, θdk = Wdk / Σj Wdj. θ contiene K pesos no negativos y suma 1. La prevalencia anual de un tópico es Pkt = (1/Nt) × Σd∈Dt θdk. Se calcula por fuente y para el conjunto; cada artículo pesa igual, aunque difiera en longitud. Prevalencia significa peso medio de tópico en documentos, no porcentaje de lectores o de espacio de portada.
+
+### 9.2 Selección de K y criterios internos
+
+La coherencia usa la NPMI documental media de los 45 pares entre las diez palabras principales del tópico. En 06, las probabilidades conjuntas y marginales se calculan sobre presencia documental compatible; este cálculo se distingue de la NPMI defectuosa de bigramas de 05. La estabilidad compara componentes emparejados mediante asignación húngara y similitud coseno.
+
+| K | Coherencia media | Coherencia mínima | Estabilidad | Error de reconstrucción |
 | --- | --- | --- | --- | --- |
-| El Tiempo | 54 | 4 | 2 | 60 |
-| Semana | 8 | 15 | 2 | 25 |
-| Dinero | 3 | 2 | 10 | 15 |
+| 15 | 0,2840 | 0,2121 | 0,7865 | 147,0082 |
+| 20 | 0,2908 | 0,1676 | 0,8115 | 146,6858 |
+| 30 | 0,2967 | 0,1522 | 0,8281 | 146,1080 |
+| 40 | 0,3007 | 0,1457 | 0,8248 | 145,6259 |
 
-| Clase | Precisión | Recall | F1 |
+Fuente: notebook 06, celda 13 y `seleccion_K.csv`; muestra de ajuste de 22.534 documentos, dos semillas/inicializaciones. El criterio elige la mayor coherencia entre K con estabilidad al menos igual a la mediana de la grilla. K = 40 satisface esa regla, aunque K = 30 tiene estabilidad ligeramente mayor.
+
+K = 40 está en el borde superior de la grilla: es una elección práctica dentro de 15, 20, 30 y 40, no un óptimo global. Al aumentar K mejora la coherencia media, pero disminuye la coherencia mínima. El error de reconstrucción es un criterio de ajuste, no una medida de interpretación humana ni una comparación directa entre familias de modelos.
+
+### 9.3 Qué representan los componentes
+
+Entre los tópicos persistidos aparecen T05 con `farc, ejército, militares, guerrilleros`, T03 con `alcalde, ciudad, alcaldía`, T07 con `música, disco, teatro`, y T21 con `congreso, proyecto, ley`. Sus nombres abreviados ayudan a leer resultados, pero son interpretaciones de palabras principales, no clases anotadas. Otros componentes contienen marcas de estilo, avisos, nombres o secciones; se evita asumir que los 40 componentes son 40 asuntos sociales independientes.
+
+Los mapas originales por fuente (06, celda 18) se adjuntan en resultados. Incluyen 22 años con N ≥ 40 en El Tiempo, 30 en Semana y 13 en Dinero. Sus colores expresan prevalencia relativa al promedio del tópico en cada serie; no comparan directamente tamaño absoluto entre fuentes. La visualización legible de El Tiempo se presenta en la figura 6, con todos sus componentes.
+
+## 10. Estabilidad, segmentación y robustez
+
+### 10.1 Distancia entre agendas y nulo
+
+JS(P,Q) = ½ KL(P,M) + ½ KL(Q,M), con M = (P + Q)/2 y logaritmo base 2. Su rango es 0–1: cero indica distribuciones iguales. Una distancia pequeña puede ser estadísticamente detectable si los grupos tienen muchos documentos, por lo que se informa magnitud además del p-valor.
+
+Para cada par de años consecutivos elegibles (ambos N ≥ 40), se reúnen los documentos, se permutan etiquetas de año dentro de cada fuente preservando los tamaños y se recalcula JS 1.000 veces. El p-valor se estima como (1 + número de valores nulos ≥ observado)/1.001. Se aplica Benjamini–Hochberg al 5% dentro de cada serie. El nulo representa intercambiabilidad de documentos bajo ausencia de cambio interno a fuente; no corrige todos los sesgos de selección ni la dependencia editorial.
+
+| Serie | Transiciones significativas / evaluadas | JS medio observado | Media nula |
 | --- | --- | --- | --- |
-| El Tiempo | 54/65 = 0,83 | 54/60 = 0,90 | 0,86 |
-| Semana | 15/21 = 0,71 | 15/25 = 0,60 | 0,65 |
-| Dinero | 10/14 = 0,71 | 10/15 = 0,67 | 0,69 |
+| El Tiempo | 21/21 | 0,00293 | Aproximadamente 0,0008 |
+| Todas las fuentes | 21/29 | 0,01064 | 0,00927 |
+| Semana | 4/29 | Aproximadamente 0,0189 | Aproximadamente 0,0146 |
 
-Macro‑F1 = (0,86 + 0,65 + 0,69) / 3 = 0,73, mientras que la exactitud sería 79/100 = 0,79: la exactitud sube porque El Tiempo, la clase grande, se acierta mucho.
+Fuente: notebook 06, celda 20 y `transiciones_anuales.csv`. Cada fila corresponde a una serie diferente. El nulo alto de la serie combinada no es el nulo de El Tiempo. La ausencia de datos o los años bajo umbral explican por qué el número de transiciones no es necesariamente el número de años menos uno del corpus total.
 
-Referencia de azar: con clases balanceadas, adivinar al azar da un macro‑F1 cercano a 0,25 en periodo (4 clases) y 0,33 en fuente (3 clases). Las muestras no están perfectamente balanceadas, así que son referencias aproximadas. Un macro‑F1 de 0,56 está claramente por encima del azar, pero lejos de acertar siempre: periodo y fuente se confunden entre sí (los años 80 son solo Semana).
+![JS observado y nulo de El Tiempo](figuras/fig_js_eltiempo_recorte.png)
 
-### 8.3 Resultados de la comparación
+**Figura 4.** JS entre años consecutivos en El Tiempo frente al nulo por permutación. Recorte del panel central original, notebook 06, celda 21; no se alteran datos, ejes ni marcas. Línea azul: observado; discontinua negra: media nula; gris: hasta percentil 95; rojo: significativo después de BH al 5%. Los 21 pares evaluados son significativos; los puntos rojos no son los tres cortes de régimen. La figura completa, con todas las fuentes y Semana en escalas diferentes, se conserva entre los resultados adjuntos.
 
-| Representación | Dimensión | Macro‑F1 periodo | Macro‑F1 fuente | Cómputo en la muestra | Interpretable |
-| --- | --- | --- | --- | --- | --- |
-| TF‑IDF disperso (LinearSVC) | 22.196 | 0,558 | 0,527 | \~0 s | Sí |
-| TF‑IDF + SVD (regresión logística) | 128 | 0,448 | 0,495 | 1,7 s | Parcial |
-| Embeddings MiniLM‑L12 (regresión logística) | 384 | 0,390 | 0,439 | 10,1 s (GPU T4) | No |
+La distancia media anual de El Tiempo equivale al 5,90% de la distancia media entre El Tiempo y Semana en el mismo año (JS = 0,04970). Los η² descriptivos ponderados por prevalencia son 0,407% para año y 0,582% para fuente (06, celda 18); la referencia de JS entre fuentes procede de la celda 22. Se calculan separadamente, sin ajuste causal conjunto. Su diferencia no demuestra que la fuente cause más cambio; indica que, con estas agrupaciones, las composiciones varían entre medios y que es necesario distinguirlos.
 
-**Cómo leerlo.** Periodo y fuente se distinguen sobre todo por nombres propios, formato y estilo, justo lo que los embeddings de oración están entrenados para ignorar; que pierdan aquí no significa que lo harían en una tarea semántica. El periodo está además correlacionado con la fuente (los años 80 son solo Semana), así que ambos objetivos se solapan. Con esas reservas, TF‑IDF + NMF es el modelo base y los embeddings quedan como mejora (BERTopic o clustering sobre embeddings).
+### 10.2 Variación por rezago
 
-### 8.4 Reservas y control pendiente
+El análisis promedia JS para pares separados por L años. En la serie combinada aumenta de 0,0106 para L = 1 (29 pares) a 0,0392 para L = 10 (20 pares) y 0,0446 para L = 15 (15 pares). Los conjuntos de pares cambian con L; la curva está condicionada por la cobertura y composición de fuentes.
 
-- Clasificadores distintos. El TF‑IDF disperso se evaluó con LinearSVC y los otros dos con regresión logística, así que parte de la diferencia podría deberse al clasificador y no a la representación. El cuaderno 06 incluye ahora una celda de control (misma regresión logística para las tres, línea base aleatoria y F1 por clase). No hace parte de la corrida de referencia, por lo que sus cifras no están en este informe.
-- Muestra pequeña. Con unos 4.000 artículos y 5 particiones no hay intervalos de confianza; diferencias de unas pocas centésimas no son concluyentes. La ventaja del TF‑IDF disperso (0,558 frente a 0,448 y 0,390 en periodo) es amplia frente a ese ruido, pero no está cuantificada.
-- Qué no prueba. Que una representación distinga época y medio no demuestra que capture mejor el tema de los artículos. Es una prueba de separabilidad léxica, que es la propiedad que necesita un análisis de cambio de vocabulario.
-- Decisión. Se elige TF‑IDF por tres razones: separa mejor, cuesta menos y es la única entrada que NMF factoriza en temáticas legibles (cada eje es una palabra).
+![JS medio por rezago y fuente](figuras/fig_decaimiento_rezago.png)
 
-## 9. Propuesta metodológica (notebook 06)
+**Figura 5.** JS medio según separación temporal, notebook 06, celda 23. La curva azul es la serie combinada; las otras curvas son por fuente. La línea horizontal de “piso de ruido” corresponde a la media nula de todas las fuentes, no a un nulo propio de cada curva. Las cifras tabuladas en `decaimiento_rezago.csv` corresponden únicamente al conjunto combinado.
 
-**La propuesta mide la agenda con TF‑IDF + NMF y distingue cambio de ruido con un modelo nulo, en cuatro pasos de costo creciente.** Cada paso responde una parte de la pregunta y alimenta el siguiente.
+La figura muestra variación de mayor magnitud a separaciones mayores y una curva de El Tiempo de escala menor. No se interpreta el piso combinado como prueba de estabilidad de los otros medios ni se afirma una deriva ilimitada, una meseta universal o un tiempo de saturación. Los rezagos largos tienen menos pares y no incluyen bandas de incertidumbre.
 
-1. **Prevalencia de tópicos.** NMF sobre TF‑IDF, ajustado con una muestra balanceada por año; luego cada documento se proyecta a los tópicos y se normaliza a una composición (suma 1). Prevalencia del tópico *k* en el año *t* = media de esa composición en los documentos del año.
-2. **Estabilidad.** Divergencia Jensen‑Shannon entre años consecutivos, comparada con la distribución nula obtenida al permutar las etiquetas de año entre los documentos de cada par, dentro de cada fuente (1.000 permutaciones, corrección Benjamini‑Hochberg). Además, curva de decaimiento de la similitud por rezago y una escala de referencia: la distancia entre fuentes en el mismo año.
-3. **Cambios de régimen.** Segmentación binaria sobre la serie anual de prevalencias (raíz cuadrada, aproximación a la distancia de Hellinger), con coste de mínimos cuadrados ponderado por el N de cada año. Cada división solo se acepta si su ganancia supera el percentil 95 de la ganancia máxima al barajar el orden de los años: el porcentaje de años marcados no está fijado de antemano.
-4. **Robustez.** Se repite sobre variantes y solo se aceptan cambios que aparecen en al menos la mitad (±1 año): otra semilla, K = 15, 20 y 30, y sin nombres propios. Semana, Dinero y una serie estandarizada (El Tiempo + Semana con pesos fijos) sirven como contraste independiente.
+### 10.3 Segmentación: tres cortes, cuatro regímenes
 
-### 9.1 Los pasos, uno por uno
+La segmentación binaria usa la raíz cuadrada de las prevalencias de El Tiempo para trabajar sobre composiciones. Evalúa reducciones de error cuadrático ponderado por número de documentos, con tope de 3.000 por año. El mejor corte se acepta si su ganancia supera el percentil 95 de máximos obtenidos en 200 permutaciones del orden anual. El procedimiento se repite en los segmentos, exigiendo un mínimo de dos años por tramo.
 
-Cada paso se explica con la misma lógica: qué entra, qué se hace, qué sale y cómo se lee.
+La serie principal produce cortes en **1995, 2000 y 2006**, dando cuatro regímenes: 1990–1994, 1995–1999, 2000–2005 y 2006–2011. La segmentación es voraz y puede representar una deriva gradual mediante escalones; no se ha aplicado ajuste múltiple a todas las divisiones recursivas. Estos límites impiden equiparar cada corte con una ruptura histórica real y puntual.
 
-Paso 1. Muestra de ajuste y TF‑IDF. Entra: los 91.585 artículos tokenizados. Se toman hasta 1.000 artículos por año (unos 22.500 en total) para aprender el vocabulario y los pesos de rareza (IDF), y después se transforman todos los artículos con ese mismo vocabulario. Sin esa muestra balanceada, los más de 40.000 artículos de El Tiempo de 2000–2011 dominarían la estructura de los tópicos. Sale: una matriz artículos × 22.196 términos.
+### 10.4 Variantes y consenso
 
-Paso 2. NMF (factorización de matrices no negativas). La matriz TF‑IDF V se aproxima como el producto de dos matrices con valores no negativos:
+Se consideran seis variantes de El Tiempo: principal K = 40 sobre todos los documentos; K = 15, 20 y 30; K = 40 con otra semilla/inicialización; y K = 40 sin palabras asociadas a entidades. Las variantes comparten corpus, preprocesamiento y familia de modelo; varias se ajustan sobre la muestra. Su acuerdo no constituye seis validaciones independientes.
 
-```latex
-V \approx W\,H,\qquad V\in\mathbb{R}_{\ge 0}^{D\times 22196},\; W\in\mathbb{R}_{\ge 0}^{D\times K},\; H\in\mathbb{R}_{\ge 0}^{K\times 22196}
-```
+| Frontera candidata | Variantes con corte a ±1 año | Lectura |
+| --- | --- | --- |
+| 1992 | 1/6 | No alcanza consenso |
+| 1995 | 6/6 | Frontera robusta dentro de las variantes |
+| 1999 | 6/6 | Misma zona de consenso intermedio |
+| 2000 | 6/6 | Misma zona de consenso intermedio |
+| 2002 | 1/6 | No alcanza consenso |
+| 2006 | 6/6 | Frontera robusta dentro de las variantes |
 
-- Cada fila de H es un tópico: un peso por palabra. Un tópico se lee mirando sus 10 palabras de mayor peso (por ejemplo T05: farc, ejército, militares, guerrilleros, militar).
-- Cada fila de W dice cuánto de cada tópico hay en un artículo. Como todo es no negativo, un artículo es una suma de tópicos y nunca una resta, lo que hace los tópicos interpretables como partes (Lee y Seung, 1999).
-- El algoritmo minimiza el error de reconstrucción ‖V − WH‖ (norma de Frobenius, el valor por defecto de scikit‑learn) con hasta 150 iteraciones y tolerancia 10⁻³. La semilla 0 usa inicialización nndsvda y la semilla 1 una aleatoria; la comparación entre ambas mide la estabilidad.
-- Se ajusta solo con la muestra balanceada y luego cada artículo del corpus se proyecta a los tópicos. Cada fila se divide por su suma y queda una composición θ: θ\_dk ≥ 0 y la suma de θ\_dk sobre k es 1. Ningún artículo quedó con vector vacío.
-- Por qué NMF y no LDA: es rápido en CPU, determinista dada la semilla y trabaja directamente sobre TF‑IDF. LDA y BERTopic quedan como comparación futura.
+Fuente: notebook 06, celda 29 y `soporte_cambios.csv`. El criterio de consenso es ≥50% con tolerancia ±1 año. Los candidatos adyacentes se colapsan; la salida elige 1999 al empatar el soporte. Por ello, el resultado se comunica como **1999–2000**, compatible con el corte 2000 de la serie principal, y no como precisión exacta en 1999. Son tres zonas de corte y cuatro regímenes, no cuatro cambios.
 
-Paso 3. Agenda = prevalencia. La prevalencia del tópico k en el año t es el promedio de θ sobre los artículos de ese año:
+![Tópicos T00 a T19 de El Tiempo](figuras/fig_cambios_et_legible_a.png)
 
-```latex
-P_{k,t} = \frac{1}{|D_t|}\sum_{d\in D_t}\theta_{dk}, \qquad \sum_{k=1}^{K}P_{k,t}=1
-```
+**Figura 6a.** Prevalencia relativa de T00–T19 en El Tiempo, 1990–2011. Regeneración editorial desde las medias anuales de θ exportada a cinco decimales en `theta_documentos.csv.gz`; es un cálculo descriptivo sobre resultados existentes, sin ajustar modelos ni recalcular pruebas. Cada celda es media anual / media simple de los 22 años del tópico: 1 corresponde a su promedio, 0 a peso nulo y 2 al doble; los valores fuera de 0–2 se limitan solo en la escala de color. Las líneas reproducen el consenso de 06, celda 29: 1995, representante 1999 y 2006. El contorno discontinuo recuerda la zona intermedia 1999–2000, sin añadir un intervalo de confianza.
 
-Se lee como la fracción del corpus del año dedicada al tópico (por ejemplo 0,03 = 3 %). La agenda de un año es el vector de 40 prevalencias. Se calcula para el total y por fuente, y solo para años con al menos 40 artículos.
+![Tópicos T20 a T39 de El Tiempo](figuras/fig_cambios_et_legible_b.png)
 
-Paso 4. Distancia entre agendas: divergencia Jensen‑Shannon (JS). Compara dos distribuciones P y Q:
+**Figura 6b.** T20–T39, misma fuente, cálculo, escala y fronteras que la figura 6a. El cociente no expresa puntos porcentuales ni compara tamaño absoluto entre tópicos. Todos los años mostrados superan N ≥ 40. Las figuras originales de 06 se conservan en resultados; esta disposición divide las 40 filas para hacer legibles sus etiquetas.
 
-```latex
-\mathrm{JS}(P\Vert Q)=\tfrac12\,\mathrm{KL}(P\Vert M)+\tfrac12\,\mathrm{KL}(Q\Vert M),\qquad M=\tfrac12(P+Q)
-```
+Los contrastes adicionales encuentran cortes en Semana (1986, 1994, 1998, 2006 y 2008), Dinero (2007) y la serie estandarizada de El Tiempo + Semana (1995, 1999, 2002 y 2006), según 06, celda 29 y `cambios_otras_series.csv`. No forman parte del denominador de seis variantes. Son otras series del mismo sistema de análisis, con cobertura y tamaño diferentes; su coincidencia temporal no prueba una causa común ni independencia de los eventos cubiertos.
 
-con logaritmo base 2, por lo que va de 0 (agendas idénticas) a 1 (sin ningún tópico en común). Para tener una idea de la escala: si en una agenda de dos temas el segundo pasa de 10 % a 11 % de la atención, JS ≈ 0,0002; si pasa de 10 % a 15 % (y otro baja de 20 % a 15 % en una agenda de tres), JS ≈ 0,006. La escala de referencia del proyecto es la distancia entre fuentes en el mismo año: JS = 0,0497 entre El Tiempo y Semana.
+### 10.5 Contraste histórico y alcance de la coincidencia
 
-Paso 5. Cuánto es más que ruido: el modelo nulo. Aunque la agenda no cambiara, dos muestras finitas de artículos darían un JS mayor que cero. Para saber cuánto es ruido se procede así:
+El notebook describe una lista de nueve años de eventos como congelada antes del contraste: 1985, 1989, 1991, 1993, 1996, 1998, 2002, 2006 y 2010. El historial de congelación no se verifica mediante una ejecución independiente. La prueba cuenta fronteras a ±1 año y compara con 5.000 selecciones sin reemplazo de tres años entre años válidos internos de El Tiempo.
 
-1. Se juntan los artículos de los años t y t+1 con sus θ.
-2. Se barajan las etiquetas “año t” y “año t+1” entre esos artículos, pero solo dentro de cada fuente, para que la mezcla de fuentes de cada año quede intacta y se pruebe cambio dentro de la fuente.
-3. Se recalcula el JS con las etiquetas barajadas. Se repite 1.000 veces y resulta una distribución nula: el JS que aparece solo por azar.
-4. El p‑valor es (1 + número de JS nulos ≥ JS observado) / 1.001. Como se prueban 21 pares de años a la vez, se aplica la corrección de Benjamini‑Hochberg, que controla la proporción esperada de falsos descubrimientos en 5 %.
-5. Se reporta también el exceso (JS observado menos la media del nulo) y el z.
+El resultado es tres coincidencias de tres, frente a 2,53 esperadas por azar y p = 0,581 (06, celda 31). Una lista amplia y ventanas de tolerancia cubren buena parte del calendario. La coincidencia no supera esa referencia aleatoria. Tampoco demuestra ausencia de efectos históricos: el corpus, los tópicos, la resolución y el contraste pueden no captar efectos más específicos. No se deduce migración editorial, cambio de interés ciudadano ni causalidad de un evento a partir de estos resultados.
 
-Cómo se lee: un punto rojo en el gráfico es un año cuyo cambio supera el ruido. Con unos 4.000 artículos por año el nulo es muy estrecho (≈ 0,0008) y casi toda transición resulta significativa, así que lo que informa es la magnitud frente a la escala de referencia.
+## 11. Conclusiones respecto a la pregunta
 
-Paso 6. Deriva por rezago. Para cada rezago L = 1 a 15 se promedia el JS entre todos los pares de años separados por L años. Si la curva sube sin parar hay deriva acumulativa; si sube y se aplana, la variación está acotada; si queda pegada al piso de ruido, la agenda es estable. En El Tiempo pasa de 0,0029 (L = 1) a 0,0158 (L = 10) y queda plana desde L ≈ 8.
+El análisis permite caracterizar componentes léxicos y temáticos del corpus y separar tres planos: diferencias entre fuentes, cambios anuales y fronteras de segmentación. El Tiempo presenta cambio anual medio pequeño respecto a la escala entre El Tiempo y Semana, pero las 21 transiciones evaluadas son detectables bajo el nulo utilizado. Estabilidad relativa en magnitud no significa inmovilidad estadística.
 
-Paso 7. Puntos de cambio: segmentación binaria. Se parte de la serie anual de El Tiempo (22 años × 40 prevalencias) y se repite:
+La segmentación principal divide El Tiempo en cuatro regímenes; las zonas 1995, 1999–2000 y 2006 muestran soporte 6/6 a ±1 año. Ese acuerdo es robustez interna frente a las variantes estudiadas. No determina un calendario causal ni valida de manera independiente cada tópico. Las composiciones anuales y los cortes pueden reflejar simultáneamente contenido, estilo y cobertura del archivo.
 
-1. Se aplica raíz cuadrada a las prevalencias (aproxima la distancia de Hellinger y es coherente con JS).
-2. Para cada posible año de corte se calcula cuánto baja el error cuadrático al reemplazar cada tramo por su promedio. Cada año pesa según su número de artículos (tope 3.000). Esa reducción es la ganancia del corte.
-3. Se toma el mejor corte. Para decidir si es real, se baraja 200 veces el orden de los años, se calcula la mejor ganancia de cada barajada y se toma el percentil 95 como umbral. El corte se acepta solo si su ganancia lo supera.
-4. Se repite dentro de cada tramo, con un mínimo de 2 años por tramo.
+La serie combinada de 1980–2011 tiene composición de fuentes variable y no ofrece una respuesta homogénea para toda la prensa colombiana. Los años 80 se mantienen como descripción con alcance limitado. El corpus no permite extrapolar sus resultados a medios ausentes ni a periodos posteriores a 2011.
 
-Sale: la lista de años en que empieza un nuevo régimen y su fuerza (ganancia dividida por el umbral). No hay un porcentaje fijo de años marcados, que era el defecto de la regla del cuaderno 04.
+El EDA añade diversidad, vocabulario distintivo, entidades proxy y categorías léxicas auditables. También identifica un cálculo de NPMI de bigramas que debe corregirse. La elección de TF-IDF + NMF se sostiene principalmente en interpretación y compatibilidad metodológica; la comparación de clasificación tiene fuga y clasificadores distintos. La siguiente etapa debe fortalecer validez y comparabilidad antes de ampliar las interpretaciones sociales.
 
-Paso 8. Robustez y consenso. Todo el paso 7 se repite en seis variantes de El Tiempo: la corrida principal (todos los artículos, K = 40), K = 15, K = 20, K = 30, K = 40 con otra semilla (inicialización aleatoria) y K = 40 sin entidades (se quitan las palabras con al menos 5 apariciones que en 50 % o más de ellas van en mayúscula a mitad de oración). Un año es cambio de consenso si en al menos la mitad de las variantes hay un cambio a ±1 año; los candidatos contiguos se colapsan en el de mayor soporte. Las variantes comparten el TF‑IDF y la muestra, así que no son independientes entre sí; por eso se agregan como contraste Semana, Dinero y una serie estandarizada (El Tiempo + Semana con pesos fijos), que sí son datos distintos.
+## 12. Limitaciones inherentes y estadísticamente relevantes
 
-Paso 9. Cuánta varianza explican el año y la fuente (η²). Para cada tópico se mide qué fracción de la variación de θ entre artículos se explica al agrupar por año (o por fuente): η² = suma de cuadrados entre grupos / suma de cuadrados total. Se promedia ponderando por el peso del tópico. Resultado: año 0,41 %, fuente 0,58 %. Son valores bajos porque cada artículo es muy ruidoso; sirven para comparar entre sí, no como medida absoluta.
+### 12.1 Cobertura y unidades de análisis
 
-Paso 10. Contraste histórico (el último). Se congeló una lista de nueve eventos antes de ver resultados. Se cuenta cuántos cambios de consenso caen a ±1 año de algún evento (3 de 3). Para saber si eso es mucho, se sortean 5.000 veces tres años al azar entre los años válidos y se cuenta lo mismo: el promedio es 2,5 de 3 y la probabilidad de obtener 3 de 3 por azar es 0,58.
+- **Selección y desbalance:** tres medios, con 89,03% de El Tiempo; antes de 1990 solo Semana. No hay muestreo representativo de prensa ni de ciudadanía.
+- **Archivo y metadatos incompletos:** faltan garantías de cobertura por sección, edición y formato; las variaciones anuales de volumen pueden cambiar la composición observada.
+- **Dependencia documental:** noticias de una edición, evento o texto casi duplicado pueden estar correlacionadas. La deduplicación exacta no resuelve toda esa dependencia.
+- **Fecha y resolución:** la hora no se interpreta; el año agrega fenómenos de duración diferente y puede ocultar cambios breves. No hay datos de 1981.
+- **Prevalencia documental:** cada artículo pesa igual y su mezcla se normaliza. No se estima audiencia, portada, longitud dedicada ni importancia pública.
 
-### 9.2 Elección de K
+### 12.2 Medición y representación
 
-**Elección de K.** Para cada K y dos semillas se mide la coherencia NPMI (top‑10 palabras) y la estabilidad entre semillas (similitud coseno media con asignación húngara).
+- **Sin lematización:** variantes de una palabra ocupan coordenadas distintas; los unigramas fragmentan expresiones.
+- **Proxy de entidades:** depende de capitalización y no sustituye NER. La eliminación por palabra de 06 cambia más que ocurrencias individuales de nombres.
+- **Léxico propio:** prefijos, polisemia, cobertura parcial y desempates por orden producen etiquetas débiles; no hay evaluación humana ejecutada.
+- **Asociación léxica:** NPMI 05 tiene espacios muestrales incompatibles y la selección de trigramas hereda el defecto; PMI documental puede devolver vecinos no finitos si faltan candidatos.
+- **Evaluación de representaciones:** cambia clasificador, aprende transformaciones antes de folds, usa pocas observaciones y truncamiento MiniLM. No hay intervalos ni benchmark completo comparable.
+- **Tópicos:** la coherencia y estabilidad son internas; algunos componentes pueden ser estilo o sección. K40 es el borde de la grilla y no un número verdadero de temas.
 
-| K | Coherencia NPMI | Coherencia mínima por tópico | Estabilidad entre semillas |
-| --- | --- | --- | --- |
-| 15 | 0,284 | 0,212 | 0,787 |
-| 20 | 0,291 | 0,168 | 0,812 |
-| 30 | 0,297 | 0,152 | 0,828 |
-| 40 | 0,301 | 0,146 | 0,825 |
+### 12.3 Inferencia temporal
 
-Se eligió K = 40 (máxima coherencia entre los K con estabilidad por encima de la mediana). La coherencia sigue subiendo con K sin alcanzar un máximo, y K = 40 es el borde de la grilla: es una elección práctica, no un óptimo.
+- **Permutaciones:** suponen intercambiabilidad en la estratificación usada y no modelan toda la correlación editorial; la significación se interpreta junto a la magnitud.
+- **Segmentación:** es voraz, exige dos años por segmento y calibra cada división sin corrección múltiple global. Puede escalonar una deriva.
+- **Robustez:** las seis variantes comparten datos y método. La tolerancia ±1 limita la precisión de fronteras y el consenso no ofrece un intervalo probabilístico.
+- **Contraste histórico:** depende de lista, ventana y años elegibles; p0,581 no identifica causas ni ausencia de mecanismos históricos.
 
-Cómo se calculan las dos medidas. La coherencia NPMI de un tópico es el promedio de la NPMI de todos los pares de sus 10 palabras principales (45 pares):
+## 13. Propuesta metodológica final y trabajo futuro
 
-```latex
-\mathrm{NPMI}(a,b)=\frac{\ln\dfrac{p(a,b)}{p(a)\,p(b)}}{-\ln p(a,b)}\in[-1,1]
-```
+La base final realizada es TF-IDF → NMF → θ → prevalencia anual por fuente → JS con nulo y BH → segmentación calibrada → robustez. Su justificación es alinear unidades interpretables de texto con la pregunta temporal y acompañar las distancias con una referencia de muestreo. Las comparaciones futuras mantendrán el mismo corpus elegible y controles de fuente, sin afirmar que ya se ejecutaron.
 
-donde p(a,b) es la fracción de artículos de la muestra de ajuste que contienen ambas palabras y p(a), p(b) la de cada una. Un valor positivo indica que las palabras aparecen juntas más de lo esperado por azar (0,30 es un nivel claramente temático); la “coherencia mínima” es la del peor tópico. La estabilidad entre semillas ajusta dos modelos con semillas distintas, empareja sus tópicos uno a uno de la mejor manera posible (algoritmo húngaro) usando la similitud coseno entre sus vectores de palabras y promedia: 1 significa que ambos modelos encontraron los mismos tópicos y 0 que no comparten ninguno. Con K = 40 el 82 % de similitud promedio indica que la mayoría de los tópicos reaparecen, pero no todos.
-
-### 9.3 Criterios para comparar modelos
-
-**Criterios para comparar modelos.** Todo modelo candidato se juzga con los mismos criterios, que son los que se pueden medir con este corpus:
-
-| Modelo | Estado | Coherencia | Estabilidad | Interpretable | Costo en Colab gratis | Sensible a fuente/entidades |
-| --- | --- | --- | --- | --- | --- | --- |
-| Léxico temático (13 categorías) | Implementado (05) | n/a | Determinista | Sí | Bajo | Sí, cubre 6,8 % de tokens |
-| TF‑IDF + NMF | Implementado (06), base | 0,30 (K = 40) | 0,82 | Sí | \~5 min | Se mide con variante sin entidades |
-| Embeddings + clustering / BERTopic | Propuesto | por medir | por medir | Parcial | GPU; solo sobre muestra | Menos sensible a nombres propios |
-| Modelo de tópicos con covariables (STM) | Propuesto | por medir | por medir | Sí | Alto | Separa efecto de fuente y de tiempo |
-
-Qué significa cada columna y cómo se mide:
-
-- Coherencia: NPMI promedio de las 10 palabras principales de cada tópico (sección 9.2). Mide si los tópicos son legibles. Se compara entre modelos solo con el mismo corpus de ajuste.
-- Estabilidad: similitud promedio entre los tópicos de dos corridas con semillas distintas (0 a 1). Mide si el modelo encuentra siempre lo mismo.
-- Interpretable: si un humano puede leer el resultado sin otra herramienta. TF‑IDF + NMF sí (cada tópico es una lista de palabras); los embeddings no (cada dimensión es abstracta).
-- Costo en Colab gratis: tiempo y memoria disponibles en el plan gratuito. Es un criterio práctico, no de calidad.
-- Sensible a fuente y entidades: si el modelo confunde estilo editorial o nombres propios con temas; se estima repitiendo el análisis sin entidades y por fuente.
-- Representación: macro‑F1 de periodo y fuente (sección 8.2), usado solo para elegir la entrada del modelo.
-- Acuerdo de cambios: para cualquier modelo que se agregue, qué fracción de los cambios de consenso (1995, 1999–2000, 2006) reproduce a ±1 año. Un modelo nuevo solo suma evidencia si reproduce los cambios o explica por qué no.
-
-Regla de decisión: se prefiere el modelo que mantiene coherencia y estabilidad al menos iguales a las del modelo base, reproduce o explica los cambios de consenso y sigue siendo interpretable. Los modelos marcados “por medir” no se corrieron en esta entrega.
-
-## 10. Resultados (versión final del notebook 06)
-
-**La serie que se puede interpretar es la de El Tiempo entre 1990 y 2011 (22 años, entre 807 y 6.351 documentos por año); Semana y Dinero sirven de contraste.** El pooled mezcla un cambio de fuente en 1989–1990 y por eso no se usa como serie principal.
-
-### 10.1 Los tópicos
-
-NMF con K = 40 produce tópicos temáticos legibles: conflicto (*farc ejército militares*), paz y derechos humanos, justicia (*corte justicia fiscalía*), Congreso, elecciones, fútbol, torneos, cine, arte, salud, educación, internet, banca, bolsa, petróleo, café, Venezuela y Estados Unidos. También aparecen tópicos que no son temáticos: T00 (*tan cómo vez*, estilo de opinión), T18 (nombres de pila), T31 (*realizará próximo mañana*, avisos de eventos), T37 (*semana fin pasada*) y varios de mercados (T10 bolsa, T17 café, T19 petróleo, T29 oro, T27 Nueva York) que fragmentan la sección económica. Son tópicos de sección o de género y entran en la agenda medida; es una limitación declarada.
-
-&#91;image: Prevalencia de tópicos por año: área apilada y mapa de calor relativo a la media (pooled)\]
-
-### 10.2 Estabilidad año a año
-
-- En El Tiempo, **20 de 21 transiciones superan el ruido** (Benjamini‑Hochberg 5 %). El JS medio es 0,0029 y el ruido de las permutaciones ronda 0,0008. Con unos 4.000 documentos por año casi cualquier cambio es “significativo”, así que importa la magnitud, no el p‑valor.
-- Esa magnitud es pequeña: **el cambio anual en El Tiempo es el 6 % de la distancia entre El Tiempo y Semana en el mismo año** (0,0029 frente a 0,0497). Entre Dinero y El Tiempo la distancia es 0,129 y entre Dinero y Semana 0,163.
-- Los saltos mayores de El Tiempo son 2005→2006 (JS 0,0078, 2,7 veces la media), 1990→1991 (0,0057, afectado porque 1990 tiene solo 807 documentos), 1994→1995 (0,0043), 2008→2009 (0,0042) y 2001→2002 (0,0040).
-- **En los años 80 ninguna transición es significativa** (Semana, 31–166 documentos por año): no hay potencia para decir que la agenda fue estable ni que cambió.
-
-&#91;image: JS entre años consecutivos frente al ruido: pooled, El Tiempo y Semana (rojo = significativo, BH 5 %)\]
-
-### 10.3 Deriva por rezago
-
-En El Tiempo la divergencia entre años separados por *L* años crece de 0,0029 (L = 1) a 0,0105 (L = 5) y 0,0158 (L = 10), y **se queda en \~0,016 desde L = 8**. Es decir, la agenda se aleja gradualmente hasta cierto punto y luego no sigue alejándose: la variación está acotada. En Semana la curva sigue subiendo (0,038 a 15 años) y en Dinero llega a 0,08, aunque con pocos años y con crecimiento fuerte del volumen. La línea de “piso de ruido” del gráfico (0,0093) es el promedio de la serie pooled, inflado por los años 80 de N pequeño; para El Tiempo el piso real es \~0,0008.
-
-&#91;image: Decaimiento de la similitud de agenda por rezago\]
-
-### 10.4 Cuándo cambia: tres cambios de régimen en El Tiempo
-
-**Los cambios de 1995, 1999–2000 y 2006 aparecen en las 6 variantes de El Tiempo; 2002 y 1992 aparecen en una sola, así que no se consideran.** Soporte = variantes con un cambio a ±1 año.
-
-| Variante (El Tiempo) | Años en que empieza un nuevo régimen |
-| --- | --- |
-| Principal (todos los documentos, K = 40) | 1995, 2000, 2006 |
-| K = 15 | 1992, 1995, 2000, 2006 |
-| K = 20 | 1995, 2000, 2006 |
-| K = 30 | 1995, 1999, 2006 |
-| Otra semilla (K = 40) | 1995, 2000, 2006 |
-| Sin nombres propios | 1995, 1999, 2002, 2006 |
-
-Contraste con series independientes (±1 año respecto a los cambios de El Tiempo):
-
-| Serie | Cambios detectados | Reproduce 1995 | Reproduce 1999–2000 | Reproduce 2006 |
-| --- | --- | --- | --- | --- |
-| Semana (1982–2011) | 1986, 1994, 1998, 2006, 2008 | Sí (1994) | Sí (1998) | Sí (2006) |
-| Dinero (1998–2011) | 2007 | No | No | Sí (2007) |
-| Estandarizada (El Tiempo + Semana, pesos fijos) | 1995, 1999, 2002, 2006 | Sí | Sí | Sí |
-
-&#91;image: Prevalencia relativa de cada tópico en El Tiempo; líneas negras = cambios de consenso (1995, 1999, 2006)\]
-
-Qué cambia en cada uno (diferencia de prevalencia media entre regímenes de El Tiempo, en puntos porcentuales):
-
-| Cambio | Baja | Sube | Alerta |
-| --- | --- | --- | --- |
-| 1995 | EE. UU. (−1,1), policía (−1,0), torneos (−0,9), presidente‑gobierno (−0,8), elecciones (−0,8) | Internet (+1,2), empresas (+1,1), avisos de eventos (+0,8) | Cambio moderado; ningún tópico se mueve más de 1,2 puntos |
-| 1999 | Regional Cali‑Valle‑Medellín (−1,4), avisos de eventos (−1,2), río‑municipio (−0,5) | Indicadores económicos (+0,7), FARC‑ejército (+0,6), comercio (+0,5), internet (+0,5) | El Tiempo cae a 2.231 documentos en 1999 (la mitad que en 1998): posible cambio de cobertura del archivo |
-| 2006 | Empresas (−1,5), pago e impuestos (−1,2), bancos (−1,1), comercio (−1,1) | Casa y familia (+1,5), regional Cali‑Valle (+1,3), justicia (+1,1), policía (+1,0), fútbol (+0,9) | Es el salto más fuerte (JS 0,0078); coincide con el crecimiento de Dinero (de 167 a 560 documentos entre 2005 y 2007) |
-
-**Lectura.** En 2006 la cobertura de El Tiempo pasa de economía y negocios a justicia, policía, región, familia y deporte. Una hipótesis plausible, no comprobada con estos datos, es que parte del contenido económico migró a la fuente Dinero (que despega justo entonces) o a otra sección no incluida en el corpus; si fuera así, el cambio sería editorial y de archivo, no un cambio de interés público. Por la caída de documentos en 1999, el cambio de 1999–2000 debe tomarse con la misma cautela.
-
-### 10.5 La fuente pesa más que el tiempo
-
-Entre El Tiempo y Semana en el mismo año el JS es 0,0497, 17 veces el cambio anual de El Tiempo y 3 veces la deriva máxima de 10 años (0,0158). Incluso a nivel de documento, la fuente explica más varianza de la composición de tópicos (η² = 0,58 %) que el año (0,41 %); los valores son bajos porque cada artículo es individualmente ruidoso. Esto confirma que comparar años sin controlar la fuente confunde cambio de agenda con cambio de fuente (el salto 1989→1990 del pooled, con JS 0,062, es simplemente la llegada de El Tiempo).
-
-### 10.6 Contraste histórico (al final, con lista congelada)
-
-Lista congelada antes de ver resultados: 1985 (Palacio de Justicia, Armero), 1989 (asesinato de Galán), 1991 (Constitución), 1993 (muerte de Escobar), 1996 (Proceso 8000), 1998 (Pastrana y Caguán), 2002 (Uribe), 2006 (reelección y parapolítica), 2010 (Santos, ola invernal).
-
-- Los tres cambios caen a ±1 año de un evento: 1995 con 1996 (Proceso 8000), 1999 con 1998 (Pastrana y Caguán) y 2006 con la reelección de Uribe.
-- Con esta lista, tres años elegidos al azar entre los años válidos tendrían en promedio 2,5 aciertos de 3, y la probabilidad de 3 de 3 por azar es 0,58. **La coincidencia no es evidencia a favor de los eventos**: la ventana de ±1 año cubre buena parte de la serie.
-- Los eventos más politizados (1991, 1993, 2002) no producen un cambio de consenso, y lo que cambia en 1995 y 2006 es económico, regional y de orden público, no político. A resolución anual y con 40 tópicos, la agenda temática parece responder más a la estructura editorial que a las coyunturas.
-
-## 11. Conclusiones respecto a la pregunta inicial
-
-**Entre 1990 y 2011 la agenda temática de El Tiempo es muy estable a corto plazo, deriva de forma acotada y cambia de régimen en 1995, 1999–2000 y 2006; para 1980–1989 el corpus no permite responder.**
-
-1. **Estabilidad.** El cambio entre años consecutivos (JS 0,0029) es el 6 % de la distancia entre fuentes (0,0497). Casi todas las transiciones son estadísticamente distintas de cero, pero con magnitud pequeña: ningún tópico cambia más de \~1,5 puntos porcentuales entre regímenes.
-2. **Deriva.** La divergencia crece con el rezago (0,0029 → 0,0158 a 10 años) y se estabiliza desde \~8 años: la agenda se aleja gradualmente y luego queda acotada. No hay una tendencia sin límite en El Tiempo.
-3. **Cuándo cambia.** Tres cambios sobreviven a K, semilla y exclusión de nombres propios (6/6 variantes) y reaparecen en Semana (1994, 1998, 2006) y, el de 2006, en Dinero (2007). El de 2006 es el más fuerte (JS 0,0078): se reduce la economía y los negocios y sube justicia, policía, región, familia y deporte.
-4. **Qué significan.** Los cambios son de composición temática del corpus, y al menos dos (1999 y 2006) coinciden con cambios en el número de documentos o en la fuente que crece (Dinero). No se puede afirmar que reflejen un cambio del interés público y no de la cobertura o del archivo.
-5. **Historia.** Los cambios caen a ±1 año de eventos de la lista congelada (1996, 1998, 2006), pero la probabilidad de esa coincidencia por azar es 0,58. Los eventos más políticos (1991, 1993, 2002) no dejan huella robusta a resolución anual.
-6. **Fuente y tiempo.** La fuente pesa más que el tiempo. Por eso el pooled 1980–2011 no responde la pregunta: su mayor salto (1989→1990, JS 0,062) es la llegada de El Tiempo.
-7. **Años 80.** Con solo Semana y 31–166 documentos por año, ninguna transición es significativa y los resultados descriptivos son ruidosos. Responder para 1980–1989 exige más fuentes o más documentos.
-
-## 12. Limitaciones inherentes
-
-**La mayor limitación es del corpus, no del método: una sola fuente continua (El Tiempo) y solo desde 1990 impiden separar agenda de cobertura.** Las demás limitaciones acotan lo que se puede afirmar.
-
-### 12.1 Del corpus
-
-- **Cobertura temporal desigual.** Los años 80 son solo Semana, con 31–166 documentos por año; falta 1981; El Tiempo empieza en 1990 con 807 documentos. El “cambio” de 1989 a 1990 es un cambio de fuente.
-- **Fuente y tiempo confundidos.** Con una fuente por época no se puede aislar el efecto temporal; el contraste entre fuentes solo es posible en 1990–2011 y con N muy distinto (El Tiempo 81.539, Semana 6.620, Dinero 3.426).
-- **Volumen y composición variables.** El Tiempo cae a 2.231 documentos en 1999 y 2.358 en 2006; Dinero crece de 167 a 560 en dos años. Una muestra del archivo digital no es una muestra del periódico: no sabemos qué secciones, ediciones o formatos faltan en cada año. La caída simultánea de MATTR hacia 2001 y 2004–05 en las tres fuentes sugiere cambios de formato.
-- **Prevalencia, no importancia.** Un artículo cuenta igual sin importar si fue portada o nota breve, ni su audiencia. Mide qué se publicó, no qué le importó al público.
-- **Sesgos de selección y de medio.** Tres medios (dos semanarios y un diario nacional con sede en Bogotá) no representan a la prensa colombiana; la prensa regional y la audiovisual no están.
-- **Texto ya tokenizado y con ruido.** Cifras y horas partidas, caracteres de control, firmas, avisos y cartas al director mezclados con noticias. Un \~1 % de casi‑duplicados no se eliminó.
-- **Resolución temporal.** Las fechas llevan siempre hora 04:00 o 05:00 (sin información); la unidad real es el día, y el análisis se hace por año por falta de documentos en periodos más cortos.
-- **Sin etiquetas.** No hay temas anotados a mano: la validación de tópicos es interna (coherencia, estabilidad) y contra un léxico propio.
-
-### 12.2 De las técnicas
-
-- **NMF sobre unigramas, sin lematización.** Las formas de una misma palabra se dispersan y las expresiones (*derechos humanos*, *Corte Suprema*) se parten. Los bigramas calculados en el EDA no entran al modelo.
-- **Tópicos de sección y de estilo.** Algunos tópicos son género (opinión, avisos, cotizaciones) y fragmentan una misma sección; su peso se confunde con “agenda”.
-- **K y semilla.** NMF no es determinista y no hay K “correcto”: la coherencia sigue creciendo hasta K = 40 (borde de la grilla) y la estabilidad entre semillas es 0,82, no 1.
-- **Entidades.** El proxy por mayúscula es imperfecto (pierde nombres al inicio de oración, incluye siglas y títulos). La variante sin entidades solo mide parte del efecto.
-- **Prevalencia por promedio de composición.** Un artículo con varios temas se reparte entre tópicos; un artículo corto pesa igual que uno largo.
-- **Nulo por permutación.** Supone documentos intercambiables dentro de fuente y año: ignora que los artículos de una misma edición o de un mismo evento están correlacionados, lo que subestima el ruido. Con N alto casi todo es “significativo” y hay que mirar la magnitud.
-- **Segmentación binaria.** Es voraz, supone saltos en la media y descompone una deriva gradual en escalones; solo ve cambios a resolución anual y exige ≥ 2 años por tramo. El umbral 95 % se aplica a cada división sin corrección por múltiples pruebas.
-- **Robustez limitada.** Las variantes comparten vectorizador, tokenización y familia de modelo; usan la muestra balanceada (menos N) y el contraste con otras fuentes depende de pocos años (Dinero 13).
-- **Embeddings.** La comparación usa un modelo pequeño, solo los primeros 700 caracteres y \~4.000 documentos; no es concluyente sobre su valor semántico.
-- **Contraste histórico.** Con ventana de ±1 año y 9 eventos, el azar ya produce 2,5 de 3 coincidencias: sirve para contar una historia plausible, no para probarla.
-
-## 13. Mejoras propuestas
-
-**Las mejoras que más cambiarían las conclusiones son las que separan agenda de cobertura: controlar por sección y por fuente, y quitar los tópicos de estilo.** Ordenadas por impacto esperado y esfuerzo:
-
-| Prioridad | Mejora | Qué resuelve | Esfuerzo |
-| --- | --- | --- | --- |
-| 1 | Excluir o reagrupar tópicos de estilo (T00, T18, T31, T37) y fusionar los de mercados antes de medir JS | Evita que cambios de formato se lean como cambios de agenda | Bajo |
-| 2 | Verificar 1999 y 2006 contra el archivo: número de documentos por sección y año, longitud media, secciones ausentes | Decide si son cambios editoriales, de archivo o de agenda | Medio |
-| 3 | Modelo de tópicos con covariables (STM) con fuente y año | Separa el efecto de fuente del de tiempo en un solo modelo | Alto |
-| 4 | Lematización con spaCy (`es_core_news_sm`, sin parser ni NER, `nlp.pipe` en lotes) y bigramas NPMI como features | Reduce dispersión léxica; recupera expresiones | Medio |
-| 5 | BERTopic o clustering sobre embeddings (GPU) y comparar con NMF en coherencia, estabilidad y cambios | Valida si los cambios dependen del modelo de tópicos | Medio |
-| 6 | Resolución trimestral (solo 1990–2011 en El Tiempo) con el mismo nulo; PELT en vez de segmentación binaria | Detecta cambios más rápidos; evita descomponer deriva en escalones | Medio |
-| 7 | Intervalos de confianza *bootstrap* por prevalencia y corrección por múltiples pruebas en el umbral | Cuantifica incertidumbre de cada año y de cada cambio | Bajo |
-| 8 | Validación externa: codificar a mano \~300 documentos (códigos CAP) y calcular acuerdo con tópicos y léxico | Da una medida de validez de los tópicos | Alto |
-| 9 | Deduplicación más robusta (MinHash con varios umbrales) | Quita el \~1 % de casi‑duplicados | Bajo |
-| 10 | Incorporar más fuentes para los años 80 | Permite responder la pregunta para 1980–1989 | Alto (datos) |
-
-## 14. Reproducibilidad y repositorio
-
-**Todo se reproduce en Colab gratis ejecutando `05` y luego `06`; cada notebook tarda unos 5 minutos con GPU T4 (la GPU solo acelera los embeddings).** El corpus se descarga con verificación SHA‑256 desde la release `corpus-v1` del repositorio y los notebooks escriben sus resultados en `results/` (en Colab, `/content/results`; el 06 genera además un zip).
-
-Estructura propuesta del repositorio:
-
-```text
-proyecto-pln/
-├── README.md
-├── pyproject.toml            # marca la raíz del repo (lo usa utils.repo_root)
-├── requirements.txt
-├── .gitignore
-├── data/                     # ignorada por git; el corpus se descarga solo
-│   └── README.md
-├── notebooks/
-│   ├── utils.py              # carga del corpus, normalización, results_dir
-│   ├── 01-corpus.ipynb                          # Entrega 1
-│   ├── 02-textometria.ipynb                     # Entrega 1
-│   ├── 03-eda-agenda.ipynb                      # exploración posterior
-│   ├── 04-divergencia-lexica.ipynb              # experimento inicial (TF-IDF / JS / Kleinberg)
-│   ├── 05-eda-avanzado-dataset-medido.ipynb     # Entrega 2
-│   └── 06-agenda-topicos-cambio.ipynb           # Entrega 2
-├── results/                  # salidas de 01-04
-│   └── entrega2/
-│       ├── 05_eda/           # diversidad, bigramas, léxico, figuras
-│       └── 06_agenda/        # tópicos, prevalencia, transiciones, robustez, figuras, theta
-└── docs/
-    ├── informe_entrega2.pdf
-    ├── presentacion_entrega2.pdf
-    └── referencias/          # enunciado y artículo de Caicedo, Gaviria y Moreno (2012)
-```
-
-- **Se versiona:** notebooks, `utils.py`, CSV y figuras de `results/` (el `theta_documentos.csv.gz` pesa \~4 MB) e informe.
-- **No se versiona:** el parquet del corpus y `corpus_medido.parquet` (superan los límites cómodos de GitHub); este último se publica como asset de una release (por ejemplo `dataset-medido-v1`), igual que el corpus.
-- **Orden de ejecución:** `05` (EDA y dataset medido) → `06` (representación, tópicos, estabilidad, cambios, contraste histórico). Los dos son independientes en datos (cada uno carga el corpus) y deterministas con `SEED = 42`, salvo el entrenamiento de embeddings en GPU.
+| Modelo futuro | Razón de incluirlo | Evaluación y coste a registrar |
+| --- | --- | --- |
+| NMF ampliado | Base interpretable y control de sensibilidad a K, semilla, lematización y expresiones | Coherencia documental, estabilidad emparejada, legibilidad humana, fronteras y tiempo/memoria de todo el ajuste |
+| LDA | Contrastar una mezcla probabilística de tópicos basada en conteos con la factorización TF-IDF | Mismo corpus y vocabulario comparable, coherencia y estabilidad; evaluación retenida apropiada a LDA, sin equiparar su likelihood al error NMF |
+| BERTopic | Explorar agrupación sobre embeddings y posible información semántica adicional | Cobertura de documentos, tópicos/noise, coherencia, estabilidad, acuerdos de fronteras; truncamiento, hardware, codificación y clustering incluidos en coste |
+| STM | Examinar covariables de fuente y año en prevalencia temática | Incertidumbre, ajuste de covariables, diagnóstico y validación retenida; coste e interpretabilidad. Los coeficientes se interpretarán como asociaciones condicionadas |
+
+Los criterios comunes serán coherencia con probabilidades documentales consistentes, diversidad y redundancia de tópicos, estabilidad entre ajustes, lectura humana y acuerdo de fronteras con tolerancia predefinida. Se reportarán tiempo total, memoria, hardware, tamaño de corpus y truncamiento. No se compararán como equivalentes métricas internas con escalas distintas. Una solución con mayor coherencia puede fragmentar temas o perder documentos: se documentará ese compromiso.
+
+La validación humana se plantea como una muestra estratificada por fuente y año, con aproximadamente 300 documentos como punto inicial sujeto a viabilidad. Se elaborará una guía de categorías, se harán anotaciones independientes y se medirá acuerdo antes de usar etiquetas para contrastar tópicos o léxico. Esta anotación no existe aún y los 300 documentos no son un tamaño validado por potencia estadística.
+
+Para evaluar representaciones, todo ajuste de vocabulario, IDF, SVD y clasificador se hará dentro de las particiones. Se compararán clasificadores equivalentes, se añadirán líneas base realmente medidas y se aplicará separación temporal cuando el objetivo sea generalizar a años no vistos. Se conservarán documentos de un mismo grupo dependiente juntos si se detectan casi duplicados o ediciones; no se prometerá ausencia de fuga hasta verificar el protocolo.
+
+| Prioridad | Trabajo pendiente | Incertidumbre que reduce |
+| --- | --- | --- |
+| 1 | Auditar cobertura por sección/año y composición en las zonas de frontera | Diferencia entre contenido observado y cambios de archivo |
+| 2 | Corregir NPMI 05 y filtrar vecinos PMI finitos; verificar segmentación de oración | Validez de colocaciones antes de crear features |
+| 3 | Validación humana de tópicos, léxico y componentes de estilo | Interpretación y validez temática externa |
+| 4 | Comparación limpia NMF/LDA/BERTopic; STM con covariables | Sensibilidad a representación y familia de modelo |
+| 5 | Bootstrap de prevalencias, distancias y fronteras | Incertidumbre debida al muestreo y a ajustes |
+| 6 | Revisar lematización y bigramas corregidos, controlando coste | Dispersión léxica y pérdida de expresiones |
+| 7 | Segmentación alternativa, multiplicidad y eventual resolución trimestral | Sensibilidad a algoritmo y escala temporal |
+| 8 | Más fuentes y documentos de los años 80 | Alcance temporal y editorial limitado |
+
+El bootstrap debe respetar fuente y periodo y, cuando haya identificadores adecuados, bloques editoriales o eventos para no simular independencia de artículos correlacionados. Se distinguirán intervalos condicionados a tópicos fijos de los que incorporan reentrenamiento. La persistencia de cortes se contrastará junto a magnitud e incertidumbre, no solo por votos. Estas mejoras son una agenda de evaluación, no resultados adicionales de la entrega.
+
+## 14. Reproducibilidad y archivos adjuntos
+
+La entrega acompaña el informe Markdown y PDF con una presentación editable de exactamente 12 diapositivas, los notebooks 05 y 06 suministrados con salidas persistidas, el dataset medido completo y resultados. Las fuentes cuantitativas de esta redacción son esas salidas y archivos; no se ha reentrenado el modelo ni se certifica una nueva ejecución de los notebooks.
+
+| Componente | Archivo o carpeta | Función |
+| --- | --- | --- |
+| Informe | `informe_entrega2.md`, `informe_entrega2.pdf` | Desarrollo completo y versión de lectura |
+| Presentación | `presentacion_entrega2.pptx` | Síntesis editable de 12 diapositivas |
+| Corpus medido | `datos/corpus_medido.parquet` | 91.585 documentos × 15 variables |
+| Muestra | `datos/corpus_medido_muestra.csv` | 2.000 filas legibles; no sustituye el corpus completo |
+| Corridas guardadas | `notebooks/` | 05 EDA y dataset; 06 representaciones, tópicos y cambios |
+| Resultados | `resultados/` | Resúmenes, CSV, θ comprimida y figuras de las corridas |
+| Figuras editoriales | `figuras/` | Imágenes insertadas en MD y PDF con fuente y alcance |
+| Instrucciones | `LEEME.md` | Inventario, rutas, dependencias y alcance de reproducción |
+
+La reproducción analítica exige revisar las dependencias, acceso al corpus y recursos necesarios para modelos preentrenados. El orden conceptual es 05 y después 06; deben verificarse rutas del entorno de ejecución. El tiempo depende del equipo y no se promete una corrida de cinco minutos, ejecución totalmente offline o determinismo universal en GPU.
+
+La regeneración editorial del informe y de la presentación usa los resultados guardados y es distinta de entrenar modelos o recalcular pruebas. Las figuras reproducidas conservan las unidades de las fuentes; la interpretación corrige confusiones de denominador, serie y precisión. Los identificadores permiten enlazar dataset y θ y revisar ejemplos individuales. El archivo LEEME documenta el contenido de la carpeta completa y la forma de distinguir esos dos niveles de reproducción.
 
 ## Anexo A. Glosario de métodos y métricas
 
-Una línea por término. Las fórmulas y ejemplos están en las secciones que se indican.
-
-| Término | Qué responde | Cómo se calcula, en corto | Rango y lectura | Sección |
-| --- | --- | --- | --- | --- |
-| Token / tipo / hapax | Cuántas palabras hay, cuántas distintas y cuántas aparecen una sola vez | Token = cada palabra; tipo = palabra distinta; hapax = tipo con una aparición | 31,9 M tokens, 266.562 tipos, 42,3 % hapax | 5 |
-| MATTR | Qué tan variado es el vocabulario sin depender de la longitud | Tipos distintos / 500 en una ventana deslizante, promediado | 0 a 1; más bajo = más repetición | 6.1 |
-| Yule's K | Qué tan concentrado está el texto en pocas palabras | 10⁴ (Σ m² V\_m − N) / N² | Mayor K = más repetitivo (3 a 5,5 en este corpus) | 6.1 |
-| Ley de Heaps (β) | Si el vocabulario se cierra o sigue creciendo | Ajuste log‑log de V = k·N^β | β ≈ 0,5: no se cierra | 6.1 |
-| NPMI | Qué tan fuerte es la asociación entre dos palabras | ln(p(a,b)/(p(a)p(b))) / (−ln p(a,b)) | −1 a 1; >0 aparecen juntas más que el azar | 6.2, 9.2 |
-| Log‑odds con prior de Dirichlet | Qué palabras distinguen a un grupo | Diferencia de log‑odds regularizada por el corpus, dividida por su error | z alto = distintiva y bien respaldada | 6.3 |
-| PPMI | Con qué palabras aparece un concepto en el mismo artículo | máx(0, ln(p(a,b)/(p(a)p(b)))) a nivel de documento | Mayor = vecino más asociado | 6.4 |
-| TF‑IDF | Qué palabras caracterizan un artículo | (1+ln tf) · (ln((1+N)/(1+df))+1), normalizado | Mayor = más específica del artículo | 8.1 |
-| Precisión, recall, F1 | Qué tan bien se identifica una clase | P = VP/(VP+FP); R = VP/(VP+FN); F1 = 2PR/(P+R) | 0 a 1; F1 alto exige P y R altos | 8.2 |
-| Macro‑F1 | Qué tan bien se identifican todas las clases por igual | Promedio simple de los F1 por clase | 0 a 1; el azar es \~0,25 (4 clases) o \~0,33 (3 clases) | 8.2 |
-| Validación cruzada (5 particiones) | Cómo evaluar sin usar los datos de entrenamiento | Entrenar con 4/5 de los datos, evaluar con 1/5, repetir 5 veces | Promedio de los 5 resultados | 8.2 |
-| NMF | Qué temas contiene el corpus | V ≈ W·H con todo ≥ 0 | H = tópicos (palabras), W = mezcla por artículo | 9.1 |
-| θ (composición) | Cuánto de cada tema tiene un artículo | Fila de W dividida por su suma | Suma 1 | 9.1 |
-| Prevalencia | Qué fracción del año ocupa cada tema (la agenda) | Promedio de θ de los artículos del año | 0 a 1; suma 1 por año | 9.1 |
-| Coherencia NPMI | Si un tópico es legible | NPMI promedio de los 45 pares de sus 10 palabras principales | −1 a 1; \~0,30 es temático | 9.2 |
-| Estabilidad entre semillas | Si el modelo encuentra siempre los mismos tópicos | Similitud coseno promedio entre tópicos emparejados (algoritmo húngaro) | 0 a 1; 0,82 con K = 40 | 9.2 |
-| Divergencia JS | Qué tan distintas son dos agendas | ½KL(P‖M)+½KL(Q‖M), log base 2 | 0 a 1; 0,0029 entre años; 0,0497 entre fuentes | 9.1 |
-| Modelo nulo por permutación | Cuánto JS aparece solo por azar | Barajar etiquetas de año dentro de cada fuente, 1.000 veces | Su percentil 95 es el umbral de ruido | 9.1 |
-| Benjamini‑Hochberg | Cómo no declarar demasiados cambios por probar muchos años | Ajuste de p‑valores que controla la tasa de falsos descubrimientos al 5 % | p ajustado < 0,05 = significativo | 9.1 |
-| Rezago | Cuánto se aleja la agenda con el tiempo | JS medio entre años separados por L años | Curva que sube y se aplana = variación acotada | 9.1 |
-| Segmentación binaria | En qué años empieza un nuevo régimen | Mejor corte por reducción de error cuadrático, aceptado si supera el percentil 95 de cortes al azar | Años de cambio y su fuerza | 9.1 |
-| Soporte / consenso | Qué tan robusto es un cambio | Fracción de variantes con un cambio a ±1 año | ≥ 50 % = consenso; aquí 6/6 | 9.1 |
-| η² | Cuánta variación entre artículos explica el año o la fuente | Suma de cuadrados entre grupos / total | 0 a 1; 0,0041 (año), 0,0058 (fuente) | 9.1 |
+| Término | Definición y lectura en este informe |
+| --- | --- |
+| Token, tipo y hapax | Ocurrencia, forma distinta y tipo con una sola ocurrencia; los porcentajes de tipos no equivalen a porcentajes de tokens |
+| TTR y MATTR | Tipos/tokens; MATTR promedia esa razón en ventanas de 500 sobre muestras de 30.000 tokens |
+| Yule K | Concentración de frecuencias: mayor valor indica más repetición en la muestra |
+| Heaps β | Exponente de crecimiento de tipos con tokens; 0,460 describe crecimiento sublineal observado |
+| PMI y PPMI | ln[p(a,b)/(p(a)p(b))]; PPMI aplica máximo con cero. La coocurrencia realizada en 05 usa PMI filtrada |
+| NPMI | PMI normalizada por −ln p(a,b), con rango −1 a 1 bajo probabilidades compatibles; inválida en bigramas de 05, consistente en coherencia documental de 06 |
+| Log-odds regularizado | Contraste de términos entre grupo y resto con prior del corpus; no mide importancia social |
+| TF-IDF y L2 | Pesos de frecuencia y rareza; normalización por norma euclidiana, sin exigir suma 1 |
+| SVD | Compresión lineal de TF-IDF a 128 componentes, con menor lectura directa por palabra |
+| Embedding | Representación densa preentrenada; aquí 384 dimensiones y texto truncado |
+| Macro-F1 | Media del F1 por clase; cada clase pesa igual, pero el protocolo y la fuga siguen siendo relevantes |
+| Validación cruzada limpia | Ajustes de representación y clasificador dentro de cada fold; no fue el protocolo exploratorio de esta corrida |
+| NMF | Aproximación no negativa V ≈ WH; H define componentes y W contribuciones documentales |
+| θ y prevalencia | W normalizada por fila y su media anual; composición documental, no audiencia |
+| Coherencia | NPMI documental de pares de palabras principales; criterio interno que no reemplaza evaluación humana |
+| Estabilidad | Similitud de tópicos emparejados entre ajustes; 0,8248 para K40, con semillas e inicializaciones distintas |
+| JS | Divergencia entre composiciones, log base 2, rango 0–1; considerar magnitud y referencia nula |
+| Permutación y BH | Referencia de intercambiabilidad y ajuste de falsos descubrimientos por serie; no eliminación de todo sesgo |
+| Rezago | Separación L entre años; cada L usa un conjunto y número de pares distintos |
+| Segmentación binaria | Cortes recursivos por reducción de error; puede escalonar deriva y no establece causas |
+| Soporte de consenso | Fracción de seis variantes con corte a ±1 año; no intervalo de confianza ni replicación independiente |
+| η² | Variación entre grupos / variación total; descriptivo separado para año y fuente |
+| Bootstrap | Remuestreo propuesto para incertidumbre; aún no ejecutado, debe respetar estructura y dependencia |
 
 ## Anexo B. Cómo leer los gráficos
 
-- Mapas de calor de prevalencia de tópicos: cada fila es un tópico y cada columna un año; el color es la prevalencia dividida por el promedio del propio tópico. Blanco = promedio, rojo = por encima (2 = el doble), azul = por debajo. Las columnas en blanco son años con menos de 40 artículos. Las líneas negras verticales son los cambios de consenso.
-- JS contra el nulo: la línea azul es el JS observado entre cada año y el anterior; la línea discontinua negra es el JS que se espera por puro ruido; la banda gris llega al percentil 95 del ruido; los puntos rojos son transiciones significativas (BH < 5 %). Lo importante es la distancia entre la línea azul y la banda, y la escala del eje: en El Tiempo el eje llega a 0,008, mientras que en el panel de todas las fuentes llega a 0,08 por el salto de 1990.
-- Curva de decaimiento: eje x = años de separación entre dos agendas; eje y = JS medio de todos los pares con esa separación. Una curva que sube y se aplana indica variación acotada.
-- Mapa de calor léxico: igual que el de tópicos, pero cada fila es una categoría del léxico temático y el valor es tokens por mil, relativo al promedio de la categoría.
-- MATTR y Yule's K: una línea por fuente; cada punto usa una muestra de 30.000 tokens. Los grupos sin muestra suficiente no aparecen.
+La figura de diversidad compara muestras del mismo tamaño, pero sus puntos no cubren todos los años. El espacio entre dos puntos unidos no implica que se hayan medido los años intermedios. MATTR más alto y Yule K más bajo describen diversidad mayor con esas medidas, sin identificar su causa.
+
+La figura de entidades es un cociente agregado por año. No muestra la media por documento de 21,956%. La figura léxica muestra un cociente respecto a la media de la categoría: dos filas rojas pueden tener cantidades absolutas muy diferentes. Igual cautela se aplica a mapas de tópicos: el rojo indica prevalencia relativa alta dentro de la fila, no un porcentaje absoluto mayor que otra fila.
+
+La figura JS original adjunta en resultados usa escalas distintas para cada panel; la figura 4 del informe muestra únicamente el panel de El Tiempo. La banda es una distribución nula, no un intervalo de confianza del JS observado. Un punto rojo señala una transición anual significativa después de BH; una línea de segmentación señala otra operación y puede aparecer en una zona diferente. En el gráfico por rezago, la referencia horizontal es del conjunto combinado, aunque existan curvas de otros medios.
+
+Las líneas de consenso del mapa de El Tiempo incluyen 1999 como representante algorítmico. Su lectura científica es la zona 1999–2000, tolerancia ±1, mientras que la corrida principal corta en 2000. Ningún color o línea identifica por sí solo el evento que produjo el cambio.
+
+## Referencias
+
+Caicedo, J. M., Gaviria, A. y Moreno, J. (2012). *Hechos y palabras: la realidad colombiana vista a través de la prensa escrita*. Revista de Economía Institucional. [Artículo completo](https://www.redalyc.org/pdf/419/41923219006.pdf).
+
+Lee, D. D. y Seung, H. S. (1999). *Learning the parts of objects by non-negative matrix factorization*. Nature, 401, 788–791. [Publicación](https://www.nature.com/articles/44565).
+
+Blei, D. M., Ng, A. Y. y Jordan, M. I. (2003). *Latent Dirichlet Allocation*. JMLR, 3, 993–1022. [Publicación](https://www.jmlr.org/papers/v3/blei03a.html).
+
+Reimers, N. y Gurevych, I. (2019). *Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks*. [Trabajo original](https://arxiv.org/abs/1908.10084).
+
+Los antecedentes conceptuales retenidos del proyecto incluyen Michel et al. (2011), McCombs y Shaw (1972), Baumgartner y Jones (1993), Monroe, Colaresi y Quinn (2008), Covington y McFall (2010), Kleinberg (2002), Blei y Lafferty (2006), Roberts et al. (2014), Grootendorst (2022) y Killick, Fearnhead y Eckley (2012). Se usan como orientación metodológica; no se les atribuyen resultados empíricos del corpus de esta entrega.
+
+Fuentes analíticas locales: notebook 05 `05_eda_avanzado_dataset_medido.ipynb`, notebook 06 `06_agenda_topicos_cambio_ver2.ipynb`, dataset medido y archivos de resultados adjuntos. Los números de celda de los captions y del texto cuentan desde 1.
