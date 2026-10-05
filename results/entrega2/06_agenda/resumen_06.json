@@ -1,0 +1,75 @@
+{
+  "K": 40,
+  "docs": 91585,
+  "años_validos": [
+    1990,
+    1991,
+    1992,
+    1993,
+    1994,
+    1995,
+    1996,
+    1997,
+    1998,
+    1999,
+    2000,
+    2001,
+    2002,
+    2003,
+    2004,
+    2005,
+    2006,
+    2007,
+    2008,
+    2009,
+    2010,
+    2011
+  ],
+  "frac_transiciones_significativas": 0.7241379310344828,
+  "js_medio_rezago1": 0.010635403213764404,
+  "js_rezago1_eltiempo": 0.002929718939873808,
+  "ruido_medio": 0.00926763249935917,
+  "eta2_año": 0.004067731910140659,
+  "eta2_fuente": 0.005822257049659878,
+  "cambios_consenso_eltiempo": [
+    1995,
+    1999,
+    2006
+  ],
+  "js_entre_fuentes": 0.049698240706909425,
+  "otras_series": {
+    "semana (todos los docs)": [
+      1986,
+      1994,
+      1998,
+      2006,
+      2008
+    ],
+    "dinero (todos los docs)": [
+      2007
+    ],
+    "estandarizada (El Tiempo + Semana, pesos fijos)": [
+      1995,
+      1999,
+      2002,
+      2006
+    ],
+    "pooled sin estandarizar (incluye cambio de fuente 1989→1990)": [
+      1986,
+      1990,
+      1992,
+      1995,
+      1999,
+      2001,
+      2006
+    ]
+  },
+  "variantes": [
+    "El Tiempo (todos los docs)",
+    "K=15",
+    "K=20",
+    "K=30",
+    "semilla 1 (K=40)",
+    "sin entidades (nombres propios)"
+  ]
+}

@@ -1,0 +1,4 @@
+representación,macroF1 periodo,macroF1 fuente,seg. cómputo (muestra)
+TF‑IDF disperso (22196 dim),0.558,0.527,0.0
+TF‑IDF + SVD (128 dim),0.448,0.495,1.69
+Embeddings MiniLM‑L12 multiling. (384 dim),0.39,0.439,10.078
