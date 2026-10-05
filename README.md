@@ -124,4 +124,4 @@ Pontificia Universidad Javeriana · Procesamiento de Lenguaje Natural · profeso
 - Massimo Maimone
 - Mauricio Morales
 - Juan Felipe Guzmán
-- David Castañeda
+- David Castillo

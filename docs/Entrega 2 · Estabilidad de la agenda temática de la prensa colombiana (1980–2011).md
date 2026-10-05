@@ -1,6 +1,6 @@
 # Entrega 2 · Estabilidad de la agenda temática de la prensa colombiana (1980–2011)
 
-**Integrantes:** José Miguel Bejarano, Massimo Maimone, Mauricio Morales, Juan Felipe Guzmán y David Castañeda.
+**Integrantes:** José Miguel Bejarano, Massimo Maimone, Mauricio Morales, Juan Felipe Guzmán y David Castillo.
 
 **Curso:** Procesamiento de Lenguaje Natural · Pontificia Universidad Javeriana. **Profesor:** Luis Gabriel Moreno Sandoval. **Fecha:** 5 de octubre de 2026.
 
@@ -495,4 +495,4 @@ Reimers, N. y Gurevych, I. (2019). *Sentence-BERT: Sentence Embeddings using Sia
 
 Los antecedentes conceptuales retenidos del proyecto incluyen Michel et al. (2011), McCombs y Shaw (1972), Baumgartner y Jones (1993), Monroe, Colaresi y Quinn (2008), Covington y McFall (2010), Kleinberg (2002), Blei y Lafferty (2006), Roberts et al. (2014), Grootendorst (2022) y Killick, Fearnhead y Eckley (2012). Se usan como orientación metodológica; no se les atribuyen resultados empíricos del corpus de esta entrega.
 
-Fuentes analíticas locales: notebook 05 `05_eda_avanzado_dataset_medido.ipynb`, notebook 06 `06_agenda_topicos_cambio_ver2.ipynb`, dataset medido y archivos de resultados adjuntos. Los números de celda de los captions y del texto cuentan desde 1.
+Fuentes analíticas locales: notebook 05 `05_eda_avanzado_dataset_medido.ipynb`, notebook 06 `06_agenda_topicos_cambio_ver2.ipynb`, dataset medido y archivos de resultados adjuntos.
