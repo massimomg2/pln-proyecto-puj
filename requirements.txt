@@ -1,0 +1,12 @@
+pandas
+numpy
+scipy
+scikit-learn
+matplotlib
+nltk
+pyarrow
+# Entrega 1 / utils.setup()
+spacy>=3.8
+wordcloud
+# Solo para la comparación con embeddings del notebook 06 (opcional; mejor con GPU)
+sentence-transformers

@@ -1,0 +1,5 @@
+[project]
+name = "proyecto-pln"
+version = "0.2.0"
+description = "Estabilidad de la agenda temática de la prensa colombiana (1980-2011)"
+requires-python = ">=3.10"

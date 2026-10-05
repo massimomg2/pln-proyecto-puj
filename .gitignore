@@ -1,0 +1,13 @@
+# Corpus y dataset medido (se descargan / se publican como assets de release)
+data/*.parquet
+data/*.part
+*.parquet
+# Python / Jupyter
+__pycache__/
+.ipynb_checkpoints/
+.venv/
+*.pyc
+# SO
+.DS_Store
+# Archivos grandes que no se versionan
+results/**/corpus_medido.csv.gz
